@@ -8,11 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-    <Folder Include="DTOs\" />
-    <Folder Include="Hubs\" />
-    <Folder Include="Models\" />
-    <Folder Include="Data\" />
     <Folder Include="Services\" />
   </ItemGroup>
 
