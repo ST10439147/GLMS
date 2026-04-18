@@ -1,0 +1,185 @@
+﻿@page "/service-requests"
+@using ST10439147_PRO7311_POE.Models
+@inject HttpClient Http
+@inject UserState UserState
+@inject NavigationManager Nav
+
+<PageTitle>Service Requests – GLMS</PageTitle>
+
+@if (!UserState.IsLoggedIn) { Nav.NavigateTo("/login"); return; }
+
+<div class="page-header">
+    <div>
+        <h1>Service Requests</h1>
+        <p>View all service requests across all contracts.</p>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <div class="filter-group">
+        <label>Filter by Contract</label>
+        <select class="form-select" @bind="_filterContractId">
+            <option value="0">All Contracts</option>
+            @foreach (var c in _contracts)
+            {
+                <option value="@c.Id">@c.Title</option>
+            }
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Status</label>
+        <select class="form-select" @bind="_filterStatus">
+            <option value="">All Statuses</option>
+            @foreach (var s in Enum.GetValues<ServiceRequestStatus>())
+            {
+                <option value="@s">@s</option>
+            }
+        </select>
+    </div>
+    <div style="display:flex;gap:.6rem;align-items:flex-end">
+        <button class="btn btn-primary" @onclick="ApplyFilter">🔍 Filter</button>
+        <button class="btn btn-secondary" @onclick="ClearFilter">✕ Clear</button>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <span class="stat-label">Total Requests</span>
+        <span class="stat-value">@_filtered.Count</span>
+    </div>
+    <div class="stat-card warning">
+        <span class="stat-label">Pending</span>
+        <span class="stat-value">@_filtered.Count(r => r.Status == ServiceRequestStatus.Pending)</span>
+    </div>
+    <div class="stat-card success">
+        <span class="stat-label">Approved</span>
+        <span class="stat-value">@_filtered.Count(r => r.Status == ServiceRequestStatus.Approved)</span>
+    </div>
+    <div class="stat-card accent">
+        <span class="stat-label">Total Value (USD)</span>
+        <span class="stat-value" style="font-size:1.3rem">$@_filtered.Sum(r => r.CostUSD).ToString("N0")</span>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        🔧 Service Requests
+        <span style="font-size:.8rem;font-weight:400;color:#6c757d">@_filtered.Count result(s)</span>
+    </div>
+    <div class="card-body" style="padding:0">
+        @if (_loading)
+        {
+            <div class="empty-state"><span class="spinner dark"></span></div>
+        }
+        else if (!_filtered.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🔧</div>
+                <h3>No service requests found</h3>
+                <p>No requests match your current filters.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Contract</th>
+                            <th>Description</th>
+                            <th>Cost (USD)</th>
+                            <th>Cost (ZAR)</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sr in _filtered)
+                        {
+                            <tr>
+                                <td style="color:#6c757d;font-size:.85rem">@sr.Id</td>
+                                <td>
+                                    @if (sr.Contract != null)
+                                    {
+                                        <a href="contracts/@sr.ContractId">@sr.Contract.Title</a>
+                                    }
+                                    else
+                                    {
+                                        <span>Contract #@sr.ContractId</span>
+                                    }
+                                </td>
+                                <td style="max-width:260px">
+                                    <span title="@sr.Description">
+                                        @(sr.Description.Length > 60
+                                            ? sr.Description[..60] + "…"
+                                            : sr.Description)
+                                    </span>
+                                </td>
+                                <td>$@sr.CostUSD.ToString("N2")</td>
+                                <td>R @sr.CostZAR.ToString("N2")</td>
+                                <td><span class="badge badge-@sr.Status.ToString().ToLower()">@sr.Status</span></td>
+                                <td style="font-size:.85rem">@sr.RequestDate.ToString("dd MMM yyyy")</td>
+                                <td>
+                                    <a class="btn btn-sm btn-outline-primary" href="contracts/@sr.ContractId">
+                                        View Contract
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<ServiceRequest> _all = new();
+    private List<ServiceRequest> _filtered = new();
+    private List<Contract> _contracts = new();
+    private bool _loading = true;
+
+    private int _filterContractId;
+    private string _filterStatus = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/v1/contract/All") ?? new();
+
+            // Gather all service requests by iterating contracts
+            foreach (var c in _contracts)
+            {
+                var srs = await Http.GetFromJsonAsync<List<ServiceRequest>>(
+                    $"api/v1/contract/ServiceRequests/{c.Id}") ?? new();
+                // Attach the contract navigation property manually for display
+                foreach (var sr in srs) sr.Contract = c;
+                _all.AddRange(srs);
+            }
+
+            _filtered = _all.ToList();
+        }
+        catch { }
+        finally { _loading = false; }
+    }
+
+    private void ApplyFilter()
+    {
+        _filtered = _all
+            .Where(r => _filterContractId == 0 || r.ContractId == _filterContractId)
+            .Where(r => string.IsNullOrEmpty(_filterStatus) || r.Status.ToString() == _filterStatus)
+            .ToList();
+    }
+
+    private void ClearFilter()
+    {
+        _filterContractId = 0;
+        _filterStatus = string.Empty;
+        _filtered = _all.ToList();
+    }
+}

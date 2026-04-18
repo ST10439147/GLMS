@@ -1,6 +1,4 @@
 ﻿using ST10439147_PRO7311_POE.Models;
-using System.Diagnostics.Contracts;
-
 namespace ST10439147_PRO7311_POE.DTOs
 {
     public class ContractResponseDto

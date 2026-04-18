@@ -1,6 +1,5 @@
 ﻿using ST10439147_PRO7311_POE.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics.Contracts;
 using System.Reflection.Emit;
 
 namespace ST10439147_PRO7311_POE.Data

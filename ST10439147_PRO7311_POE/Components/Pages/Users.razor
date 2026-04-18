@@ -1,0 +1,269 @@
+﻿@page "/users"
+@using ST10439147_PRO7311_POE.Models
+@inject HttpClient Http
+@inject UserState UserState
+@inject NavigationManager Nav
+
+<PageTitle>Users – GLMS</PageTitle>
+
+@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+
+<div class="page-header">
+    <div>
+        <h1>User Management</h1>
+        <p>Create, edit and manage system users.</p>
+    </div>
+    <button class="btn btn-primary" @onclick="OpenCreate">➕ New User</button>
+</div>
+
+@if (!string.IsNullOrEmpty(_alertMsg))
+{
+    <div class="alert @_alertClass">@_alertMsg</div>
+}
+
+<div class="card">
+    <div class="card-header">👥 Users</div>
+    <div class="card-body" style="padding:0">
+        @if (_loading)
+        {
+            <div class="empty-state"><span class="spinner dark"></span></div>
+        }
+        else if (!_users.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">👤</div>
+                <h3>No users found</h3>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th style="text-align:right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in _users)
+                        {
+                            <tr>
+                                <td style="color:#6c757d;font-size:.85rem">@u.Id</td>
+                                <td><strong>@u.FirstName @u.LastName</strong></td>
+                                <td>@u.UserName</td>
+                                <td>@u.Email</td>
+                                <td><span class="badge badge-@u.Role.ToString().ToLower()">@u.Role</span></td>
+                                <td style="text-align:right">
+                                    <div style="display:flex;gap:.4rem;justify-content:flex-end">
+                                        <button class="btn btn-sm btn-warning" @onclick="() => OpenEdit(u)">✏️ Edit</button>
+                                        @if (u.Id != UserState.CurrentUser?.Id)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(u)">Delete</button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- User Form Modal -->
+@if (_showForm)
+{
+    <div class="modal-overlay">
+        <div class="modal-box" style="max-width:520px">
+            <h4>@(_editId > 0 ? "Edit User" : "New User")</h4>
+
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:.8rem">
+                <div class="form-group">
+                    <label>First Name <span class="required">*</span></label>
+                    <input class="form-control" @bind="_fFirstName" placeholder="First name" />
+                </div>
+                <div class="form-group">
+                    <label>Last Name <span class="required">*</span></label>
+                    <input class="form-control" @bind="_fLastName" placeholder="Last name" />
+                </div>
+                <div class="form-group">
+                    <label>Username <span class="required">*</span></label>
+                    <input class="form-control" @bind="_fUserName" placeholder="Username" />
+                </div>
+                <div class="form-group">
+                    <label>Email <span class="required">*</span></label>
+                    <input type="email" class="form-control" @bind="_fEmail" placeholder="user@example.com" />
+                </div>
+                <div class="form-group">
+                    <label>Password @(_editId > 0 ? "(leave blank to keep)" : "")<span class="required">*</span></label>
+                    <input type="password" class="form-control" @bind="_fPassword" />
+                </div>
+                <div class="form-group">
+                    <label>Role <span class="required">*</span></label>
+                    <select class="form-select" @bind="_fAccessLevel">
+                        @foreach (var r in Enum.GetValues<UserRole>())
+                        {
+                            <option value="@((int)r)">@r</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_formError))
+            {
+                <div class="alert alert-danger" style="margin-bottom:.8rem">@_formError</div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="() => _showForm = false">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveUser" disabled="@_formSaving">
+                    @if (_formSaving)
+                    {
+                        <span class="spinner"></span>
+                    }
+                    else
+                    {
+
+                        <span>Save</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirm Modal -->
+@if (_deleteTarget != null)
+{
+    <div class="modal-overlay">
+        <div class="modal-box">
+            <h4>⚠️ Delete User?</h4>
+            <p>Delete <strong>@_deleteTarget.FirstName @_deleteTarget.LastName</strong>? This cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="() => _deleteTarget = null">Cancel</button>
+                <button class="btn btn-danger" @onclick="DeleteUser" disabled="@_deleting">
+                    @if (_deleting)
+                    {
+                        <span class="spinner"></span>
+                    }
+                    else
+                    {
+
+                        <span>Delete</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<User> _users = new();
+    private bool _loading = true;
+    private bool _deleting;
+    private User? _deleteTarget;
+
+    // Form state
+    private bool _showForm;
+    private bool _formSaving;
+    private int _editId;
+    private string _fFirstName = string.Empty;
+    private string _fLastName = string.Empty;
+    private string _fUserName = string.Empty;
+    private string _fEmail = string.Empty;
+    private string _fPassword = string.Empty;
+    private int _fAccessLevel = (int)UserRole.Viewer;
+    private string _formError = string.Empty;
+
+    private string _alertMsg = string.Empty;
+    private string _alertClass = string.Empty;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        try { _users = await Http.GetFromJsonAsync<List<User>>("api/user/GetAllUsers") ?? new(); }
+        catch { ShowAlert("Failed to load users.", "alert-danger"); }
+        finally { _loading = false; }
+    }
+
+    private void OpenCreate()
+    {
+        _editId = 0; _fFirstName = _fLastName = _fUserName = _fEmail = _fPassword = string.Empty;
+        _fAccessLevel = (int)UserRole.Viewer; _formError = string.Empty; _showForm = true;
+    }
+
+    private void OpenEdit(User u)
+    {
+        _editId = u.Id; _fFirstName = u.FirstName; _fLastName = u.LastName;
+        _fUserName = u.UserName; _fEmail = u.Email; _fPassword = string.Empty;
+        _fAccessLevel = u.AccessLevel; _formError = string.Empty; _showForm = true;
+    }
+
+    private async Task SaveUser()
+    {
+        _formError = string.Empty;
+        if (string.IsNullOrWhiteSpace(_fFirstName) || string.IsNullOrWhiteSpace(_fLastName) ||
+            string.IsNullOrWhiteSpace(_fUserName) || string.IsNullOrWhiteSpace(_fEmail))
+        { _formError = "All fields except password (edit) are required."; return; }
+
+        if (_editId == 0 && string.IsNullOrWhiteSpace(_fPassword))
+        { _formError = "Password is required for new users."; return; }
+
+        _formSaving = true;
+        try
+        {
+            var payload = new
+            {
+                Id = _editId,
+                FirstName = _fFirstName,
+                LastName = _fLastName,
+                UserName = _fUserName,
+                Email = _fEmail,
+                Password = _fPassword,
+                AccessLevel = _fAccessLevel
+            };
+
+            var resp = await Http.PostAsJsonAsync($"api/user/CreateUpdate/{_editId}", payload);
+            if (resp.IsSuccessStatusCode)
+            {
+                _showForm = false;
+                ShowAlert(_editId > 0 ? "User updated." : "User created.", "alert-success");
+                await Load();
+            }
+            else { _formError = "Save failed. Please try again."; }
+        }
+        catch { _formError = "An error occurred."; }
+        finally { _formSaving = false; }
+    }
+
+    private void ConfirmDelete(User u) => _deleteTarget = u;
+
+    private async Task DeleteUser()
+    {
+        if (_deleteTarget == null) return;
+        _deleting = true;
+        try
+        {
+            var resp = await Http.DeleteAsync($"api/user/DeleteUserRecord/{_deleteTarget.Id}");
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowAlert($"User '{_deleteTarget.UserName}' deleted.", "alert-success");
+                _users.Remove(_deleteTarget);
+                _deleteTarget = null;
+            }
+            else { ShowAlert("Delete failed.", "alert-danger"); }
+        }
+        catch { ShowAlert("An error occurred.", "alert-danger"); }
+        finally { _deleting = false; }
+    }
+
+    private void ShowAlert(string msg, string cls) { _alertMsg = msg; _alertClass = cls; }
+}

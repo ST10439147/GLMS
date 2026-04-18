@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject UserState UserState
+@inject NavigationManager Nav
 
 <div class="page">
     <div class="sidebar">
@@ -7,10 +9,17 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            @if (UserState.IsLoggedIn)
+            {
+                <span class="user-info">
+                    Logged in as <strong>@UserState.CurrentUser!.FirstName @UserState.CurrentUser.LastName</strong>
+                    &nbsp;·&nbsp;
+                    <span class="badge badge-@UserState.RoleLabel.ToLower()">@UserState.RoleLabel</span>
+                </span>
+            }
         </div>
 
-        <article class="content px-4">
+        <article class="content">
             @Body
         </article>
     </main>
