@@ -1,7 +1,5 @@
 ﻿using ST10439147_PRO7311_POE.DTOs;
 using ST10439147_PRO7311_POE.Models;
-using System.Diagnostics.Contracts;
-
 namespace ST10439147_PRO7311_POE.Services
 {
     public interface IContractService

@@ -15,7 +15,7 @@ namespace ST10439147_PRO7311_POE.Models
         // Rubric: Linked to Contract, Description, Cost, Status
         [Required]
         public int ContractId { get; set; }
-        public Contracts? Contract { get; set; }
+        public Contract? Contract { get; set; }
 
         [Required, MaxLength(500)]
         public string Description { get; set; } = string.Empty;

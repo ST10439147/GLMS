@@ -5,7 +5,7 @@ namespace ST10439147_PRO7311_POE.DTOs
 {
     public class ContractResponseDto
     {
-        public Contracts? Contract { get; set; }
+        public Models.Contract? Contract { get; set; }
         public string Message { get; set; } = string.Empty;
         public bool Status { get; set; } = false;
     }

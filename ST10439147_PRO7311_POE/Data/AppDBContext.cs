@@ -12,7 +12,7 @@ namespace ST10439147_PRO7311_POE.Data
 
         // ── Existing tables ────────────────────────────────────────────────
         public DbSet<Clients> Clients => Set<Clients>();
-        public DbSet<Contracts> Contracts => Set<Contracts>();
+        public DbSet<Models.Contract> Contracts => base.Set<Models.Contract>();
         public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
 
         // ── Auth table ─────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ namespace ST10439147_PRO7311_POE.Data
             base.OnModelCreating(modelBuilder);
 
             // ── Existing relationships ─────────────────────────────────────
-            modelBuilder.Entity<Contracts>()
+            modelBuilder.Entity<Models.Contract>()
                 .HasOne(c => c.Client)
                 .WithMany(cl => cl.Contracts)
                 .HasForeignKey(c => c.ClientId)
@@ -35,9 +35,9 @@ namespace ST10439147_PRO7311_POE.Data
                 .HasForeignKey(sr => sr.ContractId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Contracts>()
+            modelBuilder.Entity<Models.Contract>()
                 .Property(c => c.Title).IsRequired().HasMaxLength(200);
-            modelBuilder.Entity<Contracts>()
+            modelBuilder.Entity<Models.Contract>()
                 .Property(c => c.ServiceLevel).IsRequired().HasMaxLength(100);
             modelBuilder.Entity<Clients>()
                 .Property(c => c.Name).IsRequired().HasMaxLength(200);
@@ -62,11 +62,11 @@ namespace ST10439147_PRO7311_POE.Data
             modelBuilder.Entity<User>().HasData(new User
             {
                 Id = 1,
-                FirstName = "System",
-                LastName = "Admin",
+                FirstName = "Joshua",
+                LastName = "Jones",
                 UserName = "admin",
                 Email = "admin@glms.local",
-                Password = "Admin123",
+                Password = "Admin123@",
                 AccessLevel = (int)UserRole.Admin
             });
         }

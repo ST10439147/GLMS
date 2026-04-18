@@ -2,7 +2,6 @@
 using ST10439147_PRO7311_POE.DTOs;
 using ST10439147_PRO7311_POE.Models;
 using ST10439147_PRO7311_POE.Services;
-using System.Diagnostics.Contracts;
 
 [ApiController]
 [Route("api/v1/[controller]")]
@@ -18,7 +17,7 @@ public class ContractController : ControllerBase
     }
 
     [HttpPost("Create")]
-    public async Task<ActionResult<ContractResponseDto>> Create([FromBody] Contracts contract)
+    public async Task<ActionResult<ContractResponseDto>> Create([FromBody] Contract contract)
     {
         var result = await _contractService.CreateContract(contract);
         return Ok(result);
@@ -39,7 +38,7 @@ public class ContractController : ControllerBase
     }
 
     [HttpPut("Update/{id}")]
-    public async Task<ActionResult<ContractResponseDto>> Update(int id, [FromBody] Contracts contract)
+    public async Task<ActionResult<ContractResponseDto>> Update(int id, [FromBody] Contract contract)
     {
         var result = await _contractService.UpdateContract(id, contract);
         return Ok(result);

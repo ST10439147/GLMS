@@ -18,7 +18,7 @@ namespace ST10439147_PRO7311_POE.Models
         [Required, MaxLength(100)]
         public string Region { get; set; } = string.Empty;
 
-        public ICollection<Contracts> Contracts { get; set; } = new List<Contracts>();
+        public ICollection<Contract> Contracts { get; set; } = new List<Contract>();
 
     }
 }
