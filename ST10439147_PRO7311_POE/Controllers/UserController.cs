@@ -7,6 +7,7 @@ namespace ST10439147_PRO7311_POE.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [IgnoreAntiforgeryToken]
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;

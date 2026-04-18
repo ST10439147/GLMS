@@ -36,10 +36,11 @@ namespace ST10439147_PRO7311_POE.Models
         [Required, MaxLength(200)]
         public string Password { get; set; } = string.Empty;
 
-        
+
         public int AccessLevel { get; set; } = (int)UserRole.Viewer;
 
         [NotMapped]
+        [System.Text.Json.Serialization.JsonIgnore]
         public UserRole Role => (UserRole)AccessLevel;
     }
 }

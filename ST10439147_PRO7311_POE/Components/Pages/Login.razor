@@ -1,17 +1,18 @@
 ﻿@page "/login"
 @using ST10439147_PRO7311_POE.Models
 @layout EmptyLayout
+@rendermode InteractiveServer
 @inject HttpClient Http
 @inject NavigationManager Nav
 @inject UserState UserState
 
-<PageTitle>Login – GLMS</PageTitle>
+<PageTitle>Login – TechMove</PageTitle>
 
 <div class="login-page">
     <div class="login-card">
         <div class="login-brand">
             <div class="brand-logo">📋</div>
-            <h1>GLMS</h1>
+            <h1>TechMove</h1>
             <p>Global Contract Management System</p>
         </div>
 
@@ -25,7 +26,7 @@
             <input id="username" class="form-control @(_submitted && string.IsNullOrWhiteSpace(_username) ? "invalid" : "")"
                    type="text"
                    placeholder="Enter your username"
-                   @bind="_username"
+                   @bind="_username" @bind:event="oninput"
                    @onkeydown="HandleKeyDown" />
             @if (_submitted && string.IsNullOrWhiteSpace(_username))
             {
@@ -38,7 +39,7 @@
             <input id="password" class="form-control @(_submitted && string.IsNullOrWhiteSpace(_password) ? "invalid" : "")"
                    type="password"
                    placeholder="Enter your password"
-                   @bind="_password"
+                   @bind="_password" @bind:event="oninput"
                    @onkeydown="HandleKeyDown" />
             @if (_submitted && string.IsNullOrWhiteSpace(_password))
             {
@@ -46,7 +47,7 @@
             }
         </div>
 
-        <button class="btn btn-primary btn-lg" style="width:100%" @onclick="DoLogin" disabled="@_loading">
+        <button class="btn btn-primary btn-lg" style="width:100%" @onclick="DoLogin" disabled="@(_loading ? true : false)">
             @if (_loading)
             {
                 <span class="spinner"></span>
@@ -105,11 +106,16 @@
                 }
             }
 
-            _errorMsg = "Invalid username or password. Please try again.";
+            // Show the actual HTTP status to help diagnose
+            _errorMsg = $"Login failed (HTTP {(int)response.StatusCode}). Check your credentials.";
         }
-        catch
+        catch (HttpRequestException ex)
         {
-            _errorMsg = "Unable to connect to the server. Please try again later.";
+            _errorMsg = $"Cannot reach server: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _errorMsg = $"Unexpected error: {ex.Message}";
         }
         finally
         {

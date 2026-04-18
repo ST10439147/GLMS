@@ -11,7 +11,7 @@ namespace ST10439147_PRO7311_POE.Data
 
         // ── Existing tables ────────────────────────────────────────────────
         public DbSet<Clients> Clients => Set<Clients>();
-        public DbSet<Models.Contract> Contracts => base.Set<Models.Contract>();
+        public DbSet<Contract> Contracts => base.Set<Models.Contract>();
         public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
 
         // ── Auth table ─────────────────────────────────────────────────────
