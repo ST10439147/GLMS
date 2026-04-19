@@ -33,11 +33,14 @@ builder.Services.AddScoped<AccessLevelHandler>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IContractService, ContractService>();
-builder.Services.AddScoped<IClientService, ClientService>();       
+builder.Services.AddScoped<IClientService, ClientService>();       // ← NEW
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<ICurrencyConversionStrategy, OpenExchangeStrategy>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 
 // ── Replace the bare HttpClient registration with one that uses the handler ──
 builder.Services.AddScoped(sp =>
