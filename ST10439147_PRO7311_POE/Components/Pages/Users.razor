@@ -1,176 +1,181 @@
 ﻿@page "/users"
 @using ST10439147_PRO7311_POE.Models
 @inject HttpClient Http
+@inject ProtectedSessionStorage SessionStorage
 @inject UserState UserState
 @inject NavigationManager Nav
 @rendermode InteractiveServer
 
-<PageTitle>Users – GLMS</PageTitle>
+<PageTitle>Users – TechMove</PageTitle>
 
-@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
-
-<div class="page-header">
-    <div>
-        <h1>User Management</h1>
-        <p>Create, edit and manage system users.</p>
-    </div>
-    <button class="btn btn-primary" @onclick="OpenCreate">➕ New User</button>
-</div>
-
-@if (!string.IsNullOrEmpty(_alertMsg))
+@if (!_sessionChecked)
 {
-    <div class="alert @_alertClass">@_alertMsg</div>
+    <div class="alert alert-info">Loading...</div>
 }
-
-<div class="card">
-    <div class="card-header">👥 Users</div>
-    <div class="card-body" style="padding:0">
-        @if (_loading)
-        {
-            <div class="empty-state"><span class="spinner dark"></span></div>
-        }
-        else if (!_users.Any())
-        {
-            <div class="empty-state">
-                <div class="empty-icon">👤</div>
-                <h3>No users found</h3>
-            </div>
-        }
-        else
-        {
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th style="text-align:right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var u in _users)
-                        {
-                            <tr>
-                                <td style="color:#6c757d;font-size:.85rem">@u.Id</td>
-                                <td><strong>@u.FirstName @u.LastName</strong></td>
-                                <td>@u.UserName</td>
-                                <td>@u.Email</td>
-                                <td><span class="badge badge-@u.Role.ToString().ToLower()">@u.Role</span></td>
-                                <td style="text-align:right">
-                                    <div style="display:flex;gap:.4rem;justify-content:flex-end">
-                                        <button class="btn btn-sm btn-warning" @onclick="() => OpenEdit(u)">✏️ Edit</button>
-                                        @if (u.Id != UserState.CurrentUser?.Id)
-                                        {
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(u)">Delete</button>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
-</div>
-
-<!-- User Form Modal -->
-@if (_showForm)
+else if (!UserState.IsAdmin)
 {
-    <div class="modal-overlay">
-        <div class="modal-box" style="max-width:520px">
-            <h4>@(_editId > 0 ? "Edit User" : "New User")</h4>
+    <div class="alert alert-info">Redirecting...</div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>User Management</h1>
+            <p>Create, edit and manage system users.</p>
+        </div>
+        <button class="btn btn-primary" @onclick="OpenCreate">➕ New User</button>
+    </div>
 
-            <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:.8rem">
-                <div class="form-group">
-                    <label>First Name <span class="required">*</span></label>
-                    <input class="form-control" @bind="_fFirstName" placeholder="First name" />
-                </div>
-                <div class="form-group">
-                    <label>Last Name <span class="required">*</span></label>
-                    <input class="form-control" @bind="_fLastName" placeholder="Last name" />
-                </div>
-                <div class="form-group">
-                    <label>Username <span class="required">*</span></label>
-                    <input class="form-control" @bind="_fUserName" placeholder="Username" />
-                </div>
-                <div class="form-group">
-                    <label>Email <span class="required">*</span></label>
-                    <input type="email" class="form-control" @bind="_fEmail" placeholder="user@example.com" />
-                </div>
-                <div class="form-group">
-                    <label>Password @(_editId > 0 ? "(leave blank to keep)" : "")<span class="required">*</span></label>
-                    <input type="password" class="form-control" @bind="_fPassword" />
-                </div>
-                <div class="form-group">
-                    <label>Role <span class="required">*</span></label>
-                    <select class="form-select" @bind="_fAccessLevel">
-                        @foreach (var r in Enum.GetValues<UserRole>())
-                        {
-                            <option value="@((int)r)">@r</option>
-                        }
-                    </select>
-                </div>
-            </div>
+    @if (!string.IsNullOrEmpty(_alertMsg))
+    {
+        <div class="alert @_alertClass">@_alertMsg</div>
+    }
 
-            @if (!string.IsNullOrEmpty(_formError))
+    <div class="card">
+        <div class="card-header">👥 Users</div>
+        <div class="card-body" style="padding:0">
+            @if (_loading)
             {
-                <div class="alert alert-danger" style="margin-bottom:.8rem">@_formError</div>
+                <div class="empty-state"><span class="spinner dark"></span></div>
             }
-
-            <div class="modal-actions">
-                <button class="btn btn-secondary" @onclick="() => _showForm = false">Cancel</button>
-                <button class="btn btn-primary" @onclick="SaveUser" disabled="@_formSaving">
-                    @if (_formSaving)
-                    {
-                        <span class="spinner"></span>
-                    }
-                    else
-                    {
-
-                        <span>Save</span>
-                    }
-                </button>
-            </div>
+            else if (!_users.Any())
+            {
+                <div class="empty-state">
+                    <div class="empty-icon">👤</div>
+                    <h3>No users found</h3>
+                </div>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th style="text-align:right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in _users)
+                            {
+                                <tr>
+                                    <td style="color:#6c757d;font-size:.85rem">@u.Id</td>
+                                    <td><strong>@u.FirstName @u.LastName</strong></td>
+                                    <td>@u.UserName</td>
+                                    <td>@u.Email</td>
+                                    <td><span class="badge badge-@u.Role.ToString().ToLower()">@u.Role</span></td>
+                                    <td style="text-align:right">
+                                        <div style="display:flex;gap:.4rem;justify-content:flex-end">
+                                            <button class="btn btn-sm btn-warning" @onclick="() => OpenEdit(u)">✏️ Edit</button>
+                                            @if (u.Id != UserState.CurrentUser?.Id)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(u)">Delete</button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
     </div>
-}
 
-<!-- Delete Confirm Modal -->
-@if (_deleteTarget != null)
-{
-    <div class="modal-overlay">
-        <div class="modal-box">
-            <h4>⚠️ Delete User?</h4>
-            <p>Delete <strong>@_deleteTarget.FirstName @_deleteTarget.LastName</strong>? This cannot be undone.</p>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" @onclick="() => _deleteTarget = null">Cancel</button>
-                <button class="btn btn-danger" @onclick="DeleteUser" disabled="@_deleting">
-                    @if (_deleting)
-                    {
-                        <span class="spinner"></span>
-                    }
-                    else
-                    {
+    @if (_showForm)
+    {
+        <div class="modal-overlay">
+            <div class="modal-box" style="max-width:520px">
+                <h4>@(_editId > 0 ? "Edit User" : "New User")</h4>
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:.8rem">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input class="form-control" @bind="_fFirstName" placeholder="First name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input class="form-control" @bind="_fLastName" placeholder="Last name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Username <span class="required">*</span></label>
+                        <input class="form-control" @bind="_fUserName" placeholder="Username" />
+                    </div>
+                    <div class="form-group">
+                        <label>Email <span class="required">*</span></label>
+                        <input type="email" class="form-control" @bind="_fEmail" placeholder="user@example.com" />
+                    </div>
+                    <div class="form-group">
+                        <label>Password @(_editId > 0 ? "(leave blank to keep)" : "")<span class="required">*</span></label>
+                        <input type="password" class="form-control" @bind="_fPassword" />
+                    </div>
+                    <div class="form-group">
+                        <label>Role <span class="required">*</span></label>
+                        <select class="form-select" @bind="_fAccessLevel">
+                            @foreach (var r in Enum.GetValues<UserRole>())
+                            {
+                                <option value="@((int)r)">@r</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <div class="alert alert-danger" style="margin-bottom:.8rem">@_formError</div>
+                }
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" @onclick="() => _showForm = false">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveUser" disabled="@_formSaving">
+                        @if (_formSaving)
+                        {
+                            <span class="spinner"></span>
+                        }
+                        else
+                        {
 
-                        <span>Delete</span>
-                    }
-                </button>
+                            <span>Save</span>
+                        }
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    }
+
+    @if (_deleteTarget != null)
+    {
+        <div class="modal-overlay">
+            <div class="modal-box">
+                <h4>⚠️ Delete User?</h4>
+                <p>Delete <strong>@_deleteTarget.FirstName @_deleteTarget.LastName</strong>? This cannot be undone.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" @onclick="() => _deleteTarget = null">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeleteUser" disabled="@_deleting">
+                        @if (_deleting)
+                        {
+                            <span class="spinner"></span>
+                        }
+                        else
+                        {
+
+                            <span>Delete</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
     private List<User> _users = new();
     private bool _loading = true;
     private bool _deleting;
+    private bool _sessionChecked;
     private User? _deleteTarget;
 
-    // Form state
     private bool _showForm;
     private bool _formSaving;
     private int _editId;
@@ -181,11 +186,31 @@
     private string _fPassword = string.Empty;
     private int _fAccessLevel = (int)UserRole.Viewer;
     private string _formError = string.Empty;
-
     private string _alertMsg = string.Empty;
     private string _alertClass = string.Empty;
 
-    protected override async Task OnInitializedAsync() => await Load();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_sessionChecked)
+        {
+            _sessionChecked = true;
+            if (!UserState.IsLoggedIn)
+            {
+                try
+                {
+                    var result = await SessionStorage.GetAsync<User>("currentUser");
+                    if (result.Success && result.Value != null)
+                        UserState.CurrentUser = result.Value;
+                    else
+                    { Nav.NavigateTo("/login"); return; }
+                }
+                catch { Nav.NavigateTo("/login"); return; }
+            }
+            if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+            await Load();
+            StateHasChanged();
+        }
+    }
 
     private async Task Load()
     {
@@ -214,7 +239,6 @@
         if (string.IsNullOrWhiteSpace(_fFirstName) || string.IsNullOrWhiteSpace(_fLastName) ||
             string.IsNullOrWhiteSpace(_fUserName) || string.IsNullOrWhiteSpace(_fEmail))
         { _formError = "All fields except password (edit) are required."; return; }
-
         if (_editId == 0 && string.IsNullOrWhiteSpace(_fPassword))
         { _formError = "Password is required for new users."; return; }
 
@@ -231,7 +255,6 @@
                 Password = _fPassword,
                 AccessLevel = _fAccessLevel
             };
-
             var resp = await Http.PostAsJsonAsync($"api/user/CreateUpdate/{_editId}", payload);
             if (resp.IsSuccessStatusCode)
             {
@@ -257,8 +280,7 @@
             if (resp.IsSuccessStatusCode)
             {
                 ShowAlert($"User '{_deleteTarget.UserName}' deleted.", "alert-success");
-                _users.Remove(_deleteTarget);
-                _deleteTarget = null;
+                _users.Remove(_deleteTarget); _deleteTarget = null;
             }
             else { ShowAlert("Delete failed.", "alert-danger"); }
         }

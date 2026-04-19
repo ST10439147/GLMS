@@ -1,8 +1,9 @@
 ﻿@page "/login"
 @using ST10439147_PRO7311_POE.Models
 @layout EmptyLayout
+@inject ProtectedSessionStorage SessionStorage
+@inject IUserService UserService
 @rendermode InteractiveServer
-@inject HttpClient Http
 @inject NavigationManager Nav
 @inject UserState UserState
 
@@ -47,7 +48,7 @@
             }
         </div>
 
-        <button class="btn btn-primary btn-lg" style="width:100%" @onclick="DoLogin" disabled="@(_loading ? true : false)">
+        <button class="btn btn-primary btn-lg" style="width:100%" @onclick="DoLogin" disabled="@(_loading)">
             @if (_loading)
             {
                 <span class="spinner"></span>
@@ -67,12 +68,24 @@
     private string _errorMsg = string.Empty;
     private bool _loading;
     private bool _submitted;
+    private bool _sessionChecked;
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Already logged in → redirect to dashboard
-        if (UserState.IsLoggedIn)
-            Nav.NavigateTo("/");
+        if (firstRender && !_sessionChecked)
+        {
+            _sessionChecked = true;
+            try
+            {
+                var result = await SessionStorage.GetAsync<User>("currentUser");
+                if (result.Success && result.Value != null)
+                {
+                    UserState.CurrentUser = result.Value;
+                    Nav.NavigateTo("/");   // no forceLoad
+                }
+            }
+            catch { }
+        }
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -92,26 +105,19 @@
 
         try
         {
-            var payload = new { UserName = _username, Password = _password };
-            var response = await Http.PostAsJsonAsync("api/user/Login", payload);
+            var loginDto = new LoginDTO { UserName = _username, Password = _password };
+            var user = await UserService.Login(loginDto);
 
-            if (response.IsSuccessStatusCode)
+            if (user != null)
             {
-                var user = await response.Content.ReadFromJsonAsync<User>();
-                if (user != null)
-                {
-                    UserState.CurrentUser = user;
-                    Nav.NavigateTo("/");
-                    return;
-                }
+                UserState.CurrentUser = user;
+                await SessionStorage.SetAsync("currentUser", user);
+                Nav.NavigateTo("/");   // no forceLoad
             }
-
-            // Show the actual HTTP status to help diagnose
-            _errorMsg = $"Login failed (HTTP {(int)response.StatusCode}). Check your credentials.";
-        }
-        catch (HttpRequestException ex)
-        {
-            _errorMsg = $"Cannot reach server: {ex.Message}";
+            else
+            {
+                _errorMsg = "Invalid username or password.";
+            }
         }
         catch (Exception ex)
         {

@@ -15,21 +15,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddSignalR();
 builder.Services.AddScoped<NotificationService>();
 
 // allow data to be shared between pages
-builder.Services.AddSingleton<LoginDTO>();
+builder.Services.AddScoped<LoginDTO>();
 builder.Services.AddScoped<UserState>();
 
-// DbContext - both needed: AddDbContext for EF migrations tooling,
-// AddDbContextFactory for services that inject IDbContextFactory
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")), ServiceLifetime.Scoped);
-
-// Required for IHttpClientFactory (used by OpenExchangeStrategy)
 builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<IUserService, UserService>();
@@ -41,18 +36,18 @@ builder.Services.AddControllers();
 
 builder.Services.AddScoped(sp =>
 {
-    var nav = sp.GetRequiredService<NavigationManager>();
-    return new HttpClient
-    {
-        BaseAddress = new Uri(nav.BaseUri)
-    };
+    var nav = sp.GetService<NavigationManager>();
+    var baseUrl = nav?.BaseUri ?? "https://localhost:7181/";
+    return new HttpClient { BaseAddress = new Uri(baseUrl) };
 });
 
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);

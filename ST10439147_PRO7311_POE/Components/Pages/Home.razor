@@ -2,119 +2,154 @@
 @using ST10439147_PRO7311_POE.Models
 @inject HttpClient Http
 @rendermode InteractiveServer
+@inject ProtectedSessionStorage SessionStorage
 @inject UserState UserState
 @inject NavigationManager Nav
 
-<PageTitle>Dashboard – GLMS</PageTitle>
+<PageTitle>Dashboard – TechMove</PageTitle>
 
-@if (!UserState.IsLoggedIn)
+@if (!_sessionChecked)
 {
-    Nav.NavigateTo("/login");
-    return;
+    <div class="alert alert-info">Loading...</div>
 }
-
-<div class="page-header">
-    <div>
-        <h1>Dashboard</h1>
-        <p>Welcome back, @UserState.CurrentUser!.FirstName. Here's an overview of your contracts.</p>
-    </div>
-    @if (UserState.IsManager)
-    {
-        <a class="btn btn-primary" href="contracts/create">➕ New Contract</a>
-    }
-</div>
-
-@if (_loading)
+else if (!UserState.IsLoggedIn)
 {
-    <div class="alert alert-info"><span class="spinner dark"></span> &nbsp;Loading summary...</div>
+    <div class="alert alert-info">Redirecting to login...</div>
 }
 else
 {
-    <div class="stat-grid">
-        <div class="stat-card">
-            <span class="stat-label">Total Contracts</span>
-            <span class="stat-value">@_contracts.Count</span>
+    <div class="page-header">
+        <div>
+            <h1>Dashboard</h1>
+            <p>Welcome back, @UserState.CurrentUser!.FirstName. Here's an overview of your contracts.</p>
         </div>
-        <div class="stat-card success">
-            <span class="stat-label">Active</span>
-            <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.Active)</span>
-        </div>
-        <div class="stat-card accent">
-            <span class="stat-label">Draft</span>
-            <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.Draft)</span>
-        </div>
-        <div class="stat-card warning">
-            <span class="stat-label">On Hold</span>
-            <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.OnHold)</span>
-        </div>
-        <div class="stat-card danger">
-            <span class="stat-label">Expired</span>
-            <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.Expired)</span>
-        </div>
+        @if (UserState.IsManager)
+        {
+            <a class="btn btn-primary" href="contracts/create">➕ New Contract</a>
+        }
     </div>
 
-    <!-- Recent Contracts -->
-    <div class="card">
-        <div class="card-header">
-            📄 Recent Contracts
-            <a class="btn btn-sm btn-outline-primary" href="contracts">View All</a>
+    @if (_loading)
+    {
+        <div class="alert alert-info"><span class="spinner dark"></span> &nbsp;Loading summary...</div>
+    }
+    else
+    {
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-label">Total Contracts</span>
+                <span class="stat-value">@_contracts.Count</span>
+            </div>
+            <div class="stat-card success">
+                <span class="stat-label">Active</span>
+                <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.Active)</span>
+            </div>
+            <div class="stat-card accent">
+                <span class="stat-label">Draft</span>
+                <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.Draft)</span>
+            </div>
+            <div class="stat-card warning">
+                <span class="stat-label">On Hold</span>
+                <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.OnHold)</span>
+            </div>
+            <div class="stat-card danger">
+                <span class="stat-label">Expired</span>
+                <span class="stat-value">@_contracts.Count(c => c.Status == ContractStatus.Expired)</span>
+            </div>
         </div>
-        <div class="card-body" style="padding:0">
-            @if (!_contracts.Any())
-            {
-                <div class="empty-state">
-                    <div class="empty-icon">📋</div>
-                    <h3>No contracts yet</h3>
-                    <p>Get started by creating your first contract.</p>
-                </div>
-            }
-            else
-            {
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Client</th>
-                                <th>Service Level</th>
-                                <th>Status</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var c in _contracts.OrderByDescending(x => x.Id).Take(8))
-                            {
+
+        <div class="card">
+            <div class="card-header">
+                📄 Recent Contracts
+                <a class="btn btn-sm btn-outline-primary" href="contracts">View All</a>
+            </div>
+            <div class="card-body" style="padding:0">
+                @if (!_contracts.Any())
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <h3>No contracts yet</h3>
+                        <p>Get started by creating your first contract.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td><strong>@c.Title</strong></td>
-                                    <td>@(c.Client?.Name ?? "—")</td>
-                                    <td>@c.ServiceLevel</td>
-                                    <td><span class="badge badge-@c.Status.ToString().ToLower()">@c.Status</span></td>
-                                    <td>@c.StartDate.ToString("dd MMM yyyy")</td>
-                                    <td>@c.EndDate.ToString("dd MMM yyyy")</td>
-                                    <td><a class="btn btn-sm btn-outline-primary" href="contracts/@c.Id">View</a></td>
+                                    <th>Title</th>
+                                    <th>Client</th>
+                                    <th>Service Level</th>
+                                    <th>Status</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th></th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
+                            </thead>
+                            <tbody>
+                                @foreach (var c in _contracts.OrderByDescending(x => x.Id).Take(8))
+                                {
+                                    <tr>
+                                        <td><strong>@c.Title</strong></td>
+                                        <td>@(c.Client?.Name ?? "—")</td>
+                                        <td>@c.ServiceLevel</td>
+                                        <td><span class="badge badge-@c.Status.ToString().ToLower()">@c.Status</span></td>
+                                        <td>@c.StartDate.ToString("dd MMM yyyy")</td>
+                                        <td>@c.EndDate.ToString("dd MMM yyyy")</td>
+                                        <td><a class="btn btn-sm btn-outline-primary" href="contracts/@c.Id">View</a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
         </div>
-    </div>
+    }
 }
 
 @code {
     private List<Contract> _contracts = new();
     private bool _loading = true;
+    private bool _sessionChecked;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!UserState.IsLoggedIn) return;
+        if (firstRender && !_sessionChecked)
+        {
+            _sessionChecked = true;
+
+            if (!UserState.IsLoggedIn)
+            {
+                try
+                {
+                    var result = await SessionStorage.GetAsync<User>("currentUser");
+                    if (result.Success && result.Value != null)
+                    {
+                        UserState.CurrentUser = result.Value;
+                        await LoadData();
+                        StateHasChanged();
+                        return;
+                    }
+                }
+                catch { }
+
+                // No session found — redirect to login
+                Nav.NavigateTo("/login");
+                return;
+            }
+
+            await LoadData();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
         try
         {
-            _contracts = await Http.GetFromJsonAsync<List<Contract>>(
-                "api/v1/contract/All") ?? new();
+            _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/v1/contract/All") ?? new();
         }
         catch { }
         finally { _loading = false; }

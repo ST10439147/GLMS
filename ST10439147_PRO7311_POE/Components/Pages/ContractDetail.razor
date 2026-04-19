@@ -3,210 +3,210 @@
 @using ST10439147_PRO7311_POE.DTOs
 @inject HttpClient Http
 @rendermode InteractiveServer
+@inject ProtectedSessionStorage SessionStorage
 @inject UserState UserState
 @inject NavigationManager Nav
 @inject NotificationService Notifications
 
-<PageTitle>Contract #@Id – GLMS</PageTitle>
+<PageTitle>Contract #@Id – TechMove</PageTitle>
 
-@if (!UserState.IsLoggedIn) { Nav.NavigateTo("/login"); return; }
-
-<div class="page-header">
-    <div>
-        <h1>Contract Detail</h1>
-        <p>Contract #@Id</p>
-    </div>
-    <div style="display:flex;gap:.6rem">
-        <a class="btn btn-secondary" href="contracts">← Back</a>
-        @if (UserState.IsManager && _contract != null)
-        {
-            <a class="btn btn-warning" href="contracts/@Id/edit">✏️ Edit</a>
-        }
-    </div>
-</div>
-
-@if (!string.IsNullOrEmpty(_alertMsg))
+@if (!_sessionChecked)
 {
-    <div class="alert @_alertClass">@_alertMsg</div>
+    <div class="alert alert-info">Loading...</div>
 }
-
-@if (_loading)
+else if (!UserState.IsLoggedIn)
 {
-    <div class="alert alert-info"><span class="spinner dark"></span> &nbsp;Loading...</div>
-}
-else if (_contract == null)
-{
-    <div class="empty-state">
-        <div class="empty-icon">❓</div>
-        <h3>Contract not found</h3>
-        <p>The contract you're looking for doesn't exist.</p>
-    </div>
+    <div class="alert alert-info">Redirecting...</div>
 }
 else
 {
-    <!-- Status Banner -->
-    <div class="card">
-        <div class="card-header">
-            📄 @_contract.Title
-            <span class="badge badge-@_contract.Status.ToString().ToLower()">@_contract.Status</span>
+    <div class="page-header">
+        <div>
+            <h1>Contract Detail</h1>
+            <p>Contract #@Id</p>
         </div>
-        <div class="card-body">
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <div class="detail-label">Client</div>
-                    <div class="detail-value">@(_contract.Client?.Name ?? "—")</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Service Level</div>
-                    <div class="detail-value">@_contract.ServiceLevel</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Start Date</div>
-                    <div class="detail-value">@_contract.StartDate.ToString("dd MMMM yyyy")</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">End Date</div>
-                    <div class="detail-value">@_contract.EndDate.ToString("dd MMMM yyyy")</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Signed Agreement</div>
-                    <div class="detail-value">
-                        @if (!string.IsNullOrEmpty(_contract.SignedAgreementFileName))
-                        {
-                            <a class="btn btn-sm btn-outline-primary"
-                                   href="api/v1/contract/DownloadAgreement/@Id" target="_blank">
-                                📥 @_contract.SignedAgreementFileName
-                            </a>
-                        }
-                        else
-                        {
-                            <span style="color:#6c757d">No file uploaded</span>
-                        }
-                    </div>
-                </div>
-            </div>
-
-            <!-- Status Change (Manager+) -->
-            @if (UserState.IsManager)
+        <div style="display:flex;gap:.6rem">
+            <a class="btn btn-secondary" href="contracts">← Back</a>
+            @if (UserState.IsManager && _contract != null)
             {
-                <hr style="margin:1rem 0" />
-                <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
-                    <strong style="font-size:.9rem;color:var(--primary)">Change Status:</strong>
-                    @foreach (var s in Enum.GetValues<ContractStatus>())
-                    {
-                        @if (s != _contract.Status)
-                        {
-                            <button class="btn btn-sm btn-outline-primary"
-                                    @onclick="() => ChangeStatus(s)"
-                                    disabled="@_statusChanging">
-                                → @s
-                            </button>
-                        }
-                    }
-                </div>
+                <a class="btn btn-warning" href="contracts/@Id/edit">✏️ Edit</a>
             }
         </div>
     </div>
 
-    <!-- Service Requests -->
-    <div class="card">
-        <div class="card-header">
-            🔧 Service Requests
-            <button class="btn btn-sm btn-primary" @onclick="() => _showSrForm = !_showSrForm">
-                @(_showSrForm ? "✕ Cancel" : "➕ Add Request")
-            </button>
-        </div>
-        <div class="card-body">
+    @if (!string.IsNullOrEmpty(_alertMsg))
+    {
+        <div class="alert @_alertClass">@_alertMsg</div>
+    }
 
-            <!-- New Service Request Form -->
-            @if (_showSrForm)
-            {
-                <div style="background:#f8f9fa;border-radius:8px;padding:1.2rem;margin-bottom:1.2rem;border:1px solid #e2e6ea">
-                    <h6 style="margin:0 0 1rem;color:var(--primary)">New Service Request</h6>
-                    <div class="form-grid">
-                        <div class="form-group" style="grid-column:1/-1">
-                            <label>Description <span class="required">*</span></label>
-                            <textarea class="form-control" rows="3"
-                                      @bind="_srDescription"
-                                      placeholder="Describe the service request..."></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Cost (USD) <span class="required">*</span></label>
-                            <input type="number" class="form-control" step="0.01" min="0"
-                                   @bind="_srCostUsd"
-                                   @oninput="OnCostInput"
-                                   placeholder="0.00" />
-                        </div>
-                        <div class="form-group">
-                            <label>Equivalent (ZAR)</label>
-                            <input class="form-control" readonly value="@_zarDisplay" />
-                            <span class="form-hint">Rate: @(_rate > 0 ? $"1 USD = {_rate:F2} ZAR" : "Loading...")</span>
-                        </div>
+    @if (_loading)
+    {
+        <div class="alert alert-info"><span class="spinner dark"></span> &nbsp;Loading...</div>
+    }
+    else if (_contract == null)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">❓</div>
+            <h3>Contract not found</h3>
+            <p>The contract you're looking for doesn't exist.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                📄 @_contract.Title
+                <span class="badge badge-@_contract.Status.ToString().ToLower()">@_contract.Status</span>
+            </div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Client</div>
+                        <div class="detail-value">@(_contract.Client?.Name ?? "—")</div>
                     </div>
-                    @if (!string.IsNullOrEmpty(_srError))
-                    {
-                        <div class="alert alert-danger" style="margin-top:.8rem">@_srError</div>
-                    }
-                    <div style="margin-top:1rem;display:flex;gap:.6rem">
-                        <button class="btn btn-success" @onclick="SubmitServiceRequest" disabled="@_srSaving">
-                            @if (_srSaving)
+                    <div class="detail-item">
+                        <div class="detail-label">Service Level</div>
+                        <div class="detail-value">@_contract.ServiceLevel</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Start Date</div>
+                        <div class="detail-value">@_contract.StartDate.ToString("dd MMMM yyyy")</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">End Date</div>
+                        <div class="detail-value">@_contract.EndDate.ToString("dd MMMM yyyy")</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Signed Agreement</div>
+                        <div class="detail-value">
+                            @if (!string.IsNullOrEmpty(_contract.SignedAgreementFileName))
                             {
-                                <span class="spinner"></span>
+                                <a class="btn btn-sm btn-outline-primary"
+                                       href="api/v1/contract/DownloadAgreement/@Id" target="_blank">
+                                    📥 @_contract.SignedAgreementFileName
+                                </a>
                             }
                             else
                             {
-
-                                <span>Submit Request</span>
+                                <span style="color:#6c757d">No file uploaded</span>
                             }
-                        </button>
-                        <button class="btn btn-secondary" @onclick="() => _showSrForm = false">Cancel</button>
+                        </div>
                     </div>
                 </div>
-            }
 
-            <!-- Service Request Table -->
-            @if (!_serviceRequests.Any())
-            {
-                <div class="empty-state" style="padding:2rem 0">
-                    <div class="empty-icon">🔧</div>
-                    <h3>No service requests</h3>
-                    <p>No service requests have been submitted for this contract.</p>
-                </div>
-            }
-            else
-            {
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Description</th>
-                                <th>Cost (USD)</th>
-                                <th>Cost (ZAR)</th>
-                                <th>Rate Used</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var sr in _serviceRequests)
+                @if (UserState.IsManager)
+                {
+                    <hr style="margin:1rem 0" />
+                    <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+                        <strong style="font-size:.9rem;color:var(--primary)">Change Status:</strong>
+                        @foreach (var s in Enum.GetValues<ContractStatus>())
+                        {
+                            @if (s != _contract.Status)
                             {
-                                <tr>
-                                    <td style="color:#6c757d;font-size:.85rem">@sr.Id</td>
-                                    <td>@sr.Description</td>
-                                    <td>$@sr.CostUSD.ToString("N2")</td>
-                                    <td>R @sr.CostZAR.ToString("N2")</td>
-                                    <td style="font-size:.82rem;color:#6c757d">@sr.ExchangeRateUsed.ToString("F4")</td>
-                                    <td><span class="badge badge-@sr.Status.ToString().ToLower()">@sr.Status</span></td>
-                                    <td style="font-size:.85rem">@sr.RequestDate.ToString("dd MMM yyyy")</td>
-                                </tr>
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => ChangeStatus(s)"
+                                        disabled="@_statusChanging">
+                                    → @s
+                                </button>
                             }
-                        </tbody>
-                    </table>
-                </div>
-            }
+                        }
+                    </div>
+                }
+            </div>
         </div>
-    </div>
+
+        <div class="card">
+            <div class="card-header">
+                🔧 Service Requests
+                <button class="btn btn-sm btn-primary" @onclick="() => _showSrForm = !_showSrForm">
+                    @(_showSrForm ? "✕ Cancel" : "➕ Add Request")
+                </button>
+            </div>
+            <div class="card-body">
+                @if (_showSrForm)
+                {
+                    <div style="background:#f8f9fa;border-radius:8px;padding:1.2rem;margin-bottom:1.2rem;border:1px solid #e2e6ea">
+                        <h6 style="margin:0 0 1rem;color:var(--primary)">New Service Request</h6>
+                        <div class="form-grid">
+                            <div class="form-group" style="grid-column:1/-1">
+                                <label>Description <span class="required">*</span></label>
+                                <textarea class="form-control" rows="3" @bind="_srDescription" placeholder="Describe the service request..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Cost (USD) <span class="required">*</span></label>
+                                <input type="number" class="form-control" step="0.01" min="0"
+                                       @bind="_srCostUsd" @oninput="OnCostInput" placeholder="0.00" />
+                            </div>
+                            <div class="form-group">
+                                <label>Equivalent (ZAR)</label>
+                                <input class="form-control" readonly value="@_zarDisplay" />
+                                <span class="form-hint">Rate: @(_rate > 0 ? $"1 USD = {_rate:F2} ZAR" : "Loading...")</span>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(_srError))
+                        {
+                            <div class="alert alert-danger" style="margin-top:.8rem">@_srError</div>
+                        }
+                        <div style="margin-top:1rem;display:flex;gap:.6rem">
+                            <button class="btn btn-success" @onclick="SubmitServiceRequest" disabled="@_srSaving">
+                                @if (_srSaving)
+                                {
+                                    <span class="spinner"></span>
+                                }
+                                else
+                                {
+
+                                    <span>Submit Request</span>
+                                }
+                            </button>
+                            <button class="btn btn-secondary" @onclick="() => _showSrForm = false">Cancel</button>
+                        </div>
+                    </div>
+                }
+
+                @if (!_serviceRequests.Any())
+                {
+                    <div class="empty-state" style="padding:2rem 0">
+                        <div class="empty-icon">🔧</div>
+                        <h3>No service requests</h3>
+                        <p>No service requests have been submitted for this contract.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Description</th>
+                                    <th>Cost (USD)</th>
+                                    <th>Cost (ZAR)</th>
+                                    <th>Rate Used</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var sr in _serviceRequests)
+                                {
+                                    <tr>
+                                        <td style="color:#6c757d;font-size:.85rem">@sr.Id</td>
+                                        <td>@sr.Description</td>
+                                        <td>$@sr.CostUSD.ToString("N2")</td>
+                                        <td>R @sr.CostZAR.ToString("N2")</td>
+                                        <td style="font-size:.82rem;color:#6c757d">@sr.ExchangeRateUsed.ToString("F4")</td>
+                                        <td><span class="badge badge-@sr.Status.ToString().ToLower()">@sr.Status</span></td>
+                                        <td style="font-size:.85rem">@sr.RequestDate.ToString("dd MMM yyyy")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -215,6 +215,7 @@ else
     private Contract? _contract;
     private List<ServiceRequest> _serviceRequests = new();
     private bool _loading = true;
+    private bool _sessionChecked;
     private bool _statusChanging;
     private bool _showSrForm;
     private bool _srSaving;
@@ -224,14 +225,30 @@ else
     private decimal _rate;
     private string _zarDisplay = "—";
     private string _srError = string.Empty;
-
     private string _alertMsg = string.Empty;
     private string _alertClass = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadContract();
-        await LoadRate();
+        if (firstRender && !_sessionChecked)
+        {
+            _sessionChecked = true;
+            if (!UserState.IsLoggedIn)
+            {
+                try
+                {
+                    var result = await SessionStorage.GetAsync<User>("currentUser");
+                    if (result.Success && result.Value != null)
+                        UserState.CurrentUser = result.Value;
+                    else
+                    { Nav.NavigateTo("/login"); return; }
+                }
+                catch { Nav.NavigateTo("/login"); return; }
+            }
+            await LoadContract();
+            await LoadRate();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadContract()
@@ -262,10 +279,7 @@ else
     private async Task OnCostInput(ChangeEventArgs e)
     {
         if (decimal.TryParse(e.Value?.ToString(), out var usd) && _rate > 0)
-        {
-            _srCostUsd = usd;
-            _zarDisplay = $"R {(usd * _rate):N2}";
-        }
+        { _srCostUsd = usd; _zarDisplay = $"R {(usd * _rate):N2}"; }
         else { _zarDisplay = "—"; }
         await Task.CompletedTask;
     }
@@ -273,10 +287,8 @@ else
     private async Task SubmitServiceRequest()
     {
         _srError = string.Empty;
-        if (string.IsNullOrWhiteSpace(_srDescription))
-        { _srError = "Description is required."; return; }
-        if (_srCostUsd <= 0)
-        { _srError = "Cost must be greater than 0."; return; }
+        if (string.IsNullOrWhiteSpace(_srDescription)) { _srError = "Description is required."; return; }
+        if (_srCostUsd <= 0) { _srError = "Cost must be greater than 0."; return; }
 
         _srSaving = true;
         try
@@ -290,14 +302,10 @@ else
                 ExchangeRateUsed = _rate,
                 Status = ServiceRequestStatus.Pending
             };
-
             var resp = await Http.PostAsJsonAsync("api/v1/contract/SubmitRequest", payload);
             if (resp.IsSuccessStatusCode)
             {
-                _srDescription = string.Empty;
-                _srCostUsd = 0;
-                _zarDisplay = "—";
-                _showSrForm = false;
+                _srDescription = string.Empty; _srCostUsd = 0; _zarDisplay = "—"; _showSrForm = false;
                 _serviceRequests = await Http.GetFromJsonAsync<List<ServiceRequest>>(
                     $"api/v1/contract/ServiceRequests/{Id}") ?? _serviceRequests;
                 ShowAlert("Service request submitted.", "alert-success");
@@ -319,10 +327,7 @@ else
         {
             var resp = await Http.PutAsync($"api/v1/contract/SetStatus/{Id}/{newStatus}", null);
             if (resp.IsSuccessStatusCode && _contract != null)
-            {
-                _contract.Status = newStatus;
-                ShowAlert($"Status updated to {newStatus}.", "alert-success");
-            }
+            { _contract.Status = newStatus; ShowAlert($"Status updated to {newStatus}.", "alert-success"); }
             else { ShowAlert("Status update failed.", "alert-danger"); }
         }
         catch { ShowAlert("An error occurred.", "alert-danger"); }

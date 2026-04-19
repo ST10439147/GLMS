@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using ST10439147_PRO7311_POE.Models
+@inject ProtectedSessionStorage SessionStorage
 @inject UserState UserState
-@inject NavigationManager Nav
 
 <div class="page">
     <div class="sidebar">
@@ -8,25 +10,27 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
-            @if (UserState.IsLoggedIn)
-            {
-                <span class="user-info">
-                    Logged in as <strong>@UserState.CurrentUser!.FirstName @UserState.CurrentUser.LastName</strong>
-                    &nbsp;·&nbsp;
-                    <span class="badge badge-@UserState.RoleLabel.ToLower()">@UserState.RoleLabel</span>
-                </span>
-            }
-        </div>
-
-        <article class="content">
+        <article class="content px-4">
             @Body
         </article>
     </main>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !UserState.IsLoggedIn)
+        {
+            try
+            {
+                var result = await SessionStorage.GetAsync<User>("currentUser");
+                if (result.Success && result.Value != null)
+                {
+                    UserState.CurrentUser = result.Value;
+                    StateHasChanged();
+                }
+            }
+            catch { }
+        }
+    }
+}

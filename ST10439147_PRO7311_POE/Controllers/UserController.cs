@@ -11,7 +11,7 @@ namespace ST10439147_PRO7311_POE.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly LoginDTO _loginDto;      // singleton – tracks session access level
+        private readonly LoginDTO _loginDto;
 
         public UserController(IUserService userService, LoginDTO loginDto)
         {
@@ -21,14 +21,21 @@ namespace ST10439147_PRO7311_POE.Controllers
 
         // POST api/user/Login
         [HttpPost("Login")]
+        [DisableRequestSizeLimit]
         public async Task<IActionResult> Login([FromBody] LoginDTO loginDto)
         {
-            var user = await _userService.Login(loginDto);
-            if (user == null) return Unauthorized();
+            try
+            {
+                var user = await _userService.Login(loginDto);
+                if (user == null) return Unauthorized();
 
-            // Persist access level into the singleton so other controllers can check it
-            _loginDto.AccessLevel = user.AccessLevel;
-            return Ok(user);
+                _loginDto.AccessLevel = user.AccessLevel;
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
 
         // POST api/user/CreateUpdate/{id}   (id = 0 → create)
@@ -73,7 +80,6 @@ namespace ST10439147_PRO7311_POE.Controllers
             return Ok(result);
         }
 
-        // ── Helper ────────────────────────────────────────────────────────────
         private static UserResponseDTO DenyAccess(string message) => new()
         {
             User = new User { Id = -1 },
