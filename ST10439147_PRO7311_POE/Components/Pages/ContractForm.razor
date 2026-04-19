@@ -1,222 +1,319 @@
-﻿@page "/contracts"
+﻿@page "/contracts/create"
+@page "/contracts/{Id:int}/edit"
 @using ST10439147_PRO7311_POE.Models
+@using ST10439147_PRO7311_POE.DTOs
 @inject HttpClient Http
 @inject UserState UserState
-@rendermode InteractiveServer
 @inject NavigationManager Nav
+@inject ProtectedSessionStorage SessionStorage
+@rendermode InteractiveServer
 
-<PageTitle>Contracts – GLMS</PageTitle>
+<PageTitle>@(_isEdit ? "Edit Contract" : "New Contract") – TechMove</PageTitle>
 
-@if (!UserState.IsLoggedIn) { Nav.NavigateTo("/login"); return; }
-
-<div class="page-header">
-    <div>
-        <h1>Contracts</h1>
-        <p>Manage and track all contracts.</p>
-    </div>
-    @if (UserState.IsManager)
-    {
-        <a class="btn btn-primary" href="contracts/create">➕ New Contract</a>
-    }
-</div>
-
-<!-- Filter Bar -->
-<div class="filter-bar">
-    <div class="filter-group">
-        <label>Start Date From</label>
-        <input type="date" class="form-control" @bind="_filterFrom" />
-    </div>
-    <div class="filter-group">
-        <label>Start Date To</label>
-        <input type="date" class="form-control" @bind="_filterTo" />
-    </div>
-    <div class="filter-group">
-        <label>Status</label>
-        <select class="form-select" @bind="_filterStatus">
-            <option value="">All Statuses</option>
-            @foreach (var s in Enum.GetValues<ContractStatus>())
-            {
-                <option value="@s">@s</option>
-            }
-        </select>
-    </div>
-    <div style="display:flex;gap:.6rem;align-items:flex-end">
-        <button class="btn btn-primary" @onclick="ApplyFilter">🔍 Search</button>
-        <button class="btn btn-secondary" @onclick="ClearFilter">✕ Clear</button>
-    </div>
-</div>
-
-@if (!string.IsNullOrEmpty(_alertMsg))
+@if (!_sessionChecked)
 {
-    <div class="alert @_alertClass">@_alertMsg</div>
+    <div class="alert alert-info">Loading...</div>
 }
-
-<div class="card">
-    <div class="card-header">
-        📄 Contracts
-        <span style="font-size:.8rem;font-weight:400;color:#6c757d">@_contracts.Count result(s)</span>
-    </div>
-    <div class="card-body" style="padding:0">
-        @if (_loading)
-        {
-            <div class="empty-state"><span class="spinner dark"></span></div>
-        }
-        else if (!_contracts.Any())
-        {
-            <div class="empty-state">
-                <div class="empty-icon">📋</div>
-                <h3>No contracts found</h3>
-                <p>Try adjusting your filters or create a new contract.</p>
-            </div>
-        }
-        else
-        {
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Title</th>
-                            <th>Client</th>
-                            <th>Service Level</th>
-                            <th>Status</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th style="text-align:right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var c in _contracts)
-                        {
-                            <tr>
-                                <td style="color:#6c757d;font-size:.85rem">@c.Id</td>
-                                <td><strong>@c.Title</strong></td>
-                                <td>@(c.Client?.Name ?? "—")</td>
-                                <td>@c.ServiceLevel</td>
-                                <td><span class="badge badge-@c.Status.ToString().ToLower()">@c.Status</span></td>
-                                <td>@c.StartDate.ToString("dd MMM yyyy")</td>
-                                <td>@c.EndDate.ToString("dd MMM yyyy")</td>
-                                <td style="text-align:right">
-                                    <div style="display:flex;gap:.4rem;justify-content:flex-end">
-                                        <a class="btn btn-sm btn-outline-primary" href="contracts/@c.Id">View</a>
-                                        @if (UserState.IsManager)
-                                        {
-                                            <a class="btn btn-sm btn-warning" href="contracts/@c.Id/edit">Edit</a>
-                                        }
-                                        @if (UserState.IsAdmin)
-                                        {
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(c)">Delete</button>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
-</div>
-
-<!-- Delete Confirm Modal -->
-@if (_deleteTarget != null)
+else if (!UserState.IsLoggedIn)
 {
-    <div class="modal-overlay">
-        <div class="modal-box">
-            <h4>⚠️ Delete Contract?</h4>
-            <p>Are you sure you want to delete <strong>@_deleteTarget.Title</strong>? This action cannot be undone.</p>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" @onclick="() => _deleteTarget = null">Cancel</button>
-                <button class="btn btn-danger" @onclick="DeleteContract" disabled="@_deleting">
-                    @if (_deleting)
-                    {
-                        <span class="spinner"></span>
-                    }
-                    else
-                    {
+    <div class="alert alert-info">Redirecting...</div>
+}
+else if (!UserState.IsManager)
+{
+    <div class="alert alert-danger">Access Denied – Managers and Admins only.</div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>@(_isEdit ? "Edit Contract" : "New Contract")</h1>
+            <p>@(_isEdit ? $"Editing Contract #{Id}" : "Create a new logistics contract.")</p>
+        </div>
+        <a class="btn btn-secondary" href="contracts">← Back to Contracts</a>
+    </div>
 
-                        <span>Delete</span>
+    @if (!string.IsNullOrEmpty(_alertMsg))
+    {
+        <div class="alert @_alertClass">@_alertMsg</div>
+    }
+
+    @if (_loadingForm)
+    {
+        <div class="alert alert-info"><span class="spinner dark"></span> &nbsp;Loading...</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">📄 Contract Details</div>
+            <div class="card-body">
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column: 1 / -1">
+                        <label>Title <span class="required">*</span></label>
+                        <input class="form-control" @bind="_title" placeholder="e.g. International Freight Agreement 2025" />
+                        @if (_submitted && string.IsNullOrWhiteSpace(_title))
+                        {
+                            <span class="validation-message">Title is required.</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label>Client <span class="required">*</span></label>
+                        <select class="form-select" @bind="_clientId">
+                            <option value="0">— Select a client —</option>
+                            @foreach (var c in _clients)
+                            {
+                                <option value="@c.Id">@c.Name (@c.Region)</option>
+                            }
+                        </select>
+                        @if (_submitted && _clientId == 0)
+                        {
+                            <span class="validation-message">Please select a client.</span>
+                        }
+                        <span class="form-hint"><a href="clients" target="_blank">Manage Clients ↗</a></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Service Level <span class="required">*</span></label>
+                        <select class="form-select" @bind="_serviceLevel">
+                            <option value="">— Select level —</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Premium">Premium</option>
+                            <option value="Express">Express</option>
+                            <option value="Economy">Economy</option>
+                        </select>
+                        @if (_submitted && string.IsNullOrWhiteSpace(_serviceLevel))
+                        {
+                            <span class="validation-message">Service level is required.</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label>Start Date <span class="required">*</span></label>
+                        <input type="date" class="form-control" @bind="_startDate" />
+                        @if (_submitted && _startDate == default)
+                        {
+                            <span class="validation-message">Start date is required.</span>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label>End Date <span class="required">*</span></label>
+                        <input type="date" class="form-control" @bind="_endDate" />
+                        @if (_submitted && _endDate == default)
+                        {
+                            <span class="validation-message">End date is required.</span>
+                        }
+                        @if (_submitted && _endDate != default && _startDate != default && _endDate <= _startDate)
+                        {
+                            <span class="validation-message">End date must be after start date.</span>
+                        }
+                    </div>
+
+                    @if (_isEdit)
+                    {
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select class="form-select" @bind="_status">
+                                @foreach (var s in Enum.GetValues<ContractStatus>())
+                                {
+                                    <option value="@s">@s</option>
+                                }
+                            </select>
+                        </div>
                     }
-                </button>
+                </div>
+
+                <div style="margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid #e2e6ea">
+                    <h6 style="margin:0 0 .8rem;color:var(--primary)">📎 Signed Agreement (PDF only)</h6>
+
+                    @if (_isEdit && !string.IsNullOrEmpty(_existingFileName))
+                    {
+                        <div style="margin-bottom:.8rem;padding:.6rem .9rem;background:#f0f9f0;border-radius:6px;border:1px solid #c3e6cb">
+                            ✅ Current file: <strong>@_existingFileName</strong>
+                        </div>
+                    }
+
+                    <div class="form-group" style="margin:0">
+                        <label>@(_isEdit && !string.IsNullOrEmpty(_existingFileName) ? "Replace PDF (optional)" : "Upload PDF") <span style="color:#6c757d;font-size:.82rem">— .pdf only</span></label>
+                        <InputFile OnChange="OnFileSelected" accept=".pdf" class="form-control" />
+                        @if (_fileError != null)
+                        {
+                            <span class="validation-message">@_fileError</span>
+                        }
+                        @if (_selectedFile != null)
+                        {
+                            <span class="form-hint">Selected: @_selectedFile.Name (@((_selectedFile.Size / 1024.0).ToString("N1")) KB)</span>
+                        }
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <div class="alert alert-danger" style="margin-top:1rem">@_formError</div>
+                }
+
+                <div style="margin-top:1.4rem;display:flex;gap:.8rem">
+                    <button class="btn btn-success" @onclick="Save" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner"></span><span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span>💾 @(_isEdit ? "Update Contract" : "Create Contract")</span>
+                        }
+                    </button>
+                    <a class="btn btn-secondary" href="contracts">Cancel</a>
+                </div>
             </div>
         </div>
-    </div>
+    }
 }
 
 @code {
-    private List<Contract> _contracts = new();
-    private bool _loading = true;
-    private bool _deleting;
-    private Contract? _deleteTarget;
+    [Parameter] public int? Id { get; set; }
 
-    private DateTime? _filterFrom;
-    private DateTime? _filterTo;
-    private string _filterStatus = string.Empty;
+    private bool _isEdit => Id.HasValue && Id.Value > 0;
+    private bool _sessionChecked;
+    private bool _loadingForm = true;
+    private bool _saving;
+    private bool _submitted;
 
+    private string _title = string.Empty;
+    private int _clientId;
+    private string _serviceLevel = string.Empty;
+    private DateTime _startDate = DateTime.Today;
+    private DateTime _endDate = DateTime.Today.AddYears(1);
+    private ContractStatus _status = ContractStatus.Draft;
+    private string? _existingFileName;
+
+    private IBrowserFile? _selectedFile;
+    private string? _fileError;
+    private string _formError = string.Empty;
     private string _alertMsg = string.Empty;
     private string _alertClass = string.Empty;
 
-    protected override async Task OnInitializedAsync() => await LoadContracts();
+    private List<ST10439147_PRO7311_POE.Models.Clients> _clients = new();
 
-    private async Task LoadContracts()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _loading = true;
-        try
+        if (firstRender && !_sessionChecked)
         {
-            _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/v1/contract/All") ?? new();
-        }
-        catch { ShowAlert("Failed to load contracts.", "alert-danger"); }
-        finally { _loading = false; }
-    }
-
-    private async Task ApplyFilter()
-    {
-        _loading = true;
-        try
-        {
-            var qs = new List<string>();
-            if (_filterFrom.HasValue) qs.Add($"startFrom={_filterFrom.Value:yyyy-MM-dd}");
-            if (_filterTo.HasValue) qs.Add($"startTo={_filterTo.Value:yyyy-MM-dd}");
-            if (!string.IsNullOrEmpty(_filterStatus)) qs.Add($"status={_filterStatus}");
-
-            var url = "api/v1/contract/Search" + (qs.Any() ? "?" + string.Join("&", qs) : "");
-            _contracts = await Http.GetFromJsonAsync<List<Contract>>(url) ?? new();
-        }
-        catch { ShowAlert("Search failed.", "alert-danger"); }
-        finally { _loading = false; }
-    }
-
-    private async Task ClearFilter()
-    {
-        _filterFrom = null;
-        _filterTo = null;
-        _filterStatus = string.Empty;
-        await LoadContracts();
-    }
-
-    private void ConfirmDelete(Contract c) => _deleteTarget = c;
-
-    private async Task DeleteContract()
-    {
-        if (_deleteTarget == null) return;
-        _deleting = true;
-        try
-        {
-            var resp = await Http.DeleteAsync($"api/v1/contract/Delete/{_deleteTarget.Id}");
-            if (resp.IsSuccessStatusCode)
+            _sessionChecked = true;
+            if (!UserState.IsLoggedIn)
             {
-                _contracts.Remove(_deleteTarget);
-                ShowAlert($"Contract '{_deleteTarget.Title}' deleted.", "alert-success");
-                _deleteTarget = null;
+                try
+                {
+                    var result = await SessionStorage.GetAsync<User>("currentUser");
+                    if (result.Success && result.Value != null)
+                        UserState.CurrentUser = result.Value;
+                    else
+                    { Nav.NavigateTo("/login"); return; }
+                }
+                catch { Nav.NavigateTo("/login"); return; }
             }
-            else { ShowAlert("Delete failed.", "alert-danger"); }
+            if (!UserState.IsManager) { _loadingForm = false; StateHasChanged(); return; }
+
+            await LoadClients();
+            if (_isEdit) await LoadExistingContract();
+
+            _loadingForm = false;
+            StateHasChanged();
         }
-        catch { ShowAlert("An error occurred.", "alert-danger"); }
-        finally { _deleting = false; }
     }
 
-    private void ShowAlert(string msg, string cls)
+    private async Task LoadClients()
     {
-        _alertMsg = msg; _alertClass = cls;
+        try { _clients = await Http.GetFromJsonAsync<List<ST10439147_PRO7311_POE.Models.Clients>>("api/v1/clients/All") ?? new(); }
+        catch { ShowAlert("Could not load clients. Please ensure clients exist.", "alert-warning"); }
     }
+
+    private async Task LoadExistingContract()
+    {
+        try
+        {
+            var dto = await Http.GetFromJsonAsync<ContractResponseDto>($"api/v1/contract/Get/{Id}");
+            if (dto?.Contract != null)
+            {
+                var c = dto.Contract;
+                _title = c.Title;
+                _clientId = c.ClientId;
+                _serviceLevel = c.ServiceLevel;
+                _startDate = c.StartDate;
+                _endDate = c.EndDate;
+                _status = c.Status;
+                _existingFileName = c.SignedAgreementFileName;
+            }
+            else { ShowAlert("Contract not found.", "alert-danger"); }
+        }
+        catch { ShowAlert("Failed to load contract.", "alert-danger"); }
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _fileError = null;
+        var file = e.File;
+        if (!file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        { _fileError = "Only .pdf files are allowed."; _selectedFile = null; }
+        else if (file.Size > 10 * 1024 * 1024)
+        { _fileError = "File must be less than 10 MB."; _selectedFile = null; }
+        else { _selectedFile = file; }
+    }
+
+    private async Task Save()
+    {
+        _submitted = true;
+        _formError = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_title) || _clientId == 0 ||
+            string.IsNullOrWhiteSpace(_serviceLevel) || _startDate == default ||
+            _endDate == default || _endDate <= _startDate || _fileError != null)
+            return;
+
+        _saving = true;
+        try
+        {
+            int contractId;
+
+            if (_isEdit)
+            {
+                var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = _serviceLevel, StartDate = _startDate, EndDate = _endDate };
+                var resp = await Http.PutAsJsonAsync($"api/v1/contract/Update/{Id}", payload);
+                if (!resp.IsSuccessStatusCode) { _formError = "Failed to update contract."; return; }
+
+                // Update status separately if changed
+                var current = await Http.GetFromJsonAsync<ContractResponseDto>($"api/v1/contract/Get/{Id}");
+                if (current?.Contract != null && current.Contract.Status != _status)
+                    await Http.PutAsync($"api/v1/contract/SetStatus/{Id}/{_status}", null);
+
+                contractId = Id!.Value;
+            }
+            else
+            {
+                var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = _serviceLevel, StartDate = _startDate, EndDate = _endDate, Status = ContractStatus.Draft };
+                var resp = await Http.PostAsJsonAsync("api/v1/contract/Create", payload);
+                if (!resp.IsSuccessStatusCode) { _formError = "Failed to create contract."; return; }
+                var created = await resp.Content.ReadFromJsonAsync<ContractResponseDto>();
+                contractId = created?.Contract?.Id ?? 0;
+                if (contractId == 0) { _formError = "Unexpected error creating contract."; return; }
+            }
+
+            // Upload PDF if selected
+            if (_selectedFile != null)
+            {
+                using var content = new MultipartFormDataContent();
+                var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                content.Add(new StreamContent(stream), "file", _selectedFile.Name);
+                var uploadResp = await Http.PostAsync($"api/v1/contract/UploadAgreement/{contractId}", content);
+                if (!uploadResp.IsSuccessStatusCode)
+                    ShowAlert("Contract saved, but PDF upload failed. You can retry from the detail page.", "alert-warning");
+            }
+
+            Nav.NavigateTo($"/contracts/{contractId}");
+        }
+        catch (Exception ex) { _formError = $"An error occurred: {ex.Message}"; }
+        finally { _saving = false; }
+    }
+
+    private void ShowAlert(string msg, string cls) { _alertMsg = msg; _alertClass = cls; }
 }

@@ -1,0 +1,279 @@
+﻿@page "/clients"
+@using ST10439147_PRO7311_POE.Models
+@inject HttpClient Http
+@inject ProtectedSessionStorage SessionStorage
+@inject UserState UserState
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Clients – TechMove</PageTitle>
+
+@if (!_sessionChecked)
+{
+    <div class="alert alert-info">Loading...</div>
+}
+else if (!UserState.IsLoggedIn)
+{
+    <div class="alert alert-info">Redirecting...</div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <h1>Clients</h1>
+            <p>Manage client accounts linked to contracts.</p>
+        </div>
+        @if (UserState.IsManager)
+        {
+            <button class="btn btn-primary" @onclick="OpenCreate">➕ New Client</button>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_alertMsg))
+    {
+        <div class="alert @_alertClass">@_alertMsg</div>
+    }
+
+    <div class="card">
+        <div class="card-header">🏢 Clients <span style="font-size:.8rem;font-weight:400;color:#6c757d">@_clients.Count record(s)</span></div>
+        <div class="card-body" style="padding:0">
+            @if (_loading)
+            {
+                <div class="empty-state"><span class="spinner dark"></span></div>
+            }
+            else if (!_clients.Any())
+            {
+                <div class="empty-state">
+                    <div class="empty-icon">🏢</div>
+                    <h3>No clients yet</h3>
+                    <p>Add your first client to start creating contracts.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Contact Details</th>
+                                <th>Region</th>
+                                @if (UserState.IsManager)
+                                {
+                                    <th style="text-align:right">Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in _clients)
+                            {
+                                <tr>
+                                    <td style="color:#6c757d;font-size:.85rem">@c.Id</td>
+                                    <td><strong>@c.Name</strong></td>
+                                    <td>@(string.IsNullOrEmpty(c.ContactDetails) ? "—" : c.ContactDetails)</td>
+                                    <td>@c.Region</td>
+                                    @if (UserState.IsManager)
+                                    {
+                                        <td style="text-align:right">
+                                            <div style="display:flex;gap:.4rem;justify-content:flex-end">
+                                                <button class="btn btn-sm btn-warning" @onclick="() => OpenEdit(c)">✏️ Edit</button>
+                                                @if (UserState.IsAdmin)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(c)">Delete</button>
+                                                }
+                                            </div>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (_showForm)
+    {
+        <div class="modal-overlay">
+            <div class="modal-box" style="max-width:500px">
+                <h4>@(_editId > 0 ? "Edit Client" : "New Client")</h4>
+                <div class="form-grid" style="margin-bottom:.8rem">
+                    <div class="form-group" style="grid-column:1/-1">
+                        <label>Name <span class="required">*</span></label>
+                        <input class="form-control" @bind="_fName" placeholder="e.g. Acme Shipping Co." />
+                        @if (_fSubmitted && string.IsNullOrWhiteSpace(_fName))
+                        {
+                            <span class="validation-message">Name is required.</span>
+                        }
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1">
+                        <label>Contact Details</label>
+                        <input class="form-control" @bind="_fContact" placeholder="e.g. John Smith – john@acme.com" />
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1">
+                        <label>Region <span class="required">*</span></label>
+                        <input class="form-control" @bind="_fRegion" placeholder="e.g. Sub-Saharan Africa" />
+                        @if (_fSubmitted && string.IsNullOrWhiteSpace(_fRegion))
+                        {
+                            <span class="validation-message">Region is required.</span>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(_formError))
+                {
+                    <div class="alert alert-danger" style="margin-bottom:.8rem">@_formError</div>
+                }
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" @onclick="() => _showForm = false">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveClient" disabled="@_formSaving">
+                        @if (_formSaving)
+                        {
+                            <span class="spinner"></span>
+                        }
+                        else
+                        {
+
+                            <span>Save</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_deleteTarget != null)
+    {
+        <div class="modal-overlay">
+            <div class="modal-box">
+                <h4>⚠️ Delete Client?</h4>
+                <p>Delete <strong>@_deleteTarget.Name</strong>? This cannot be undone and will fail if the client has contracts.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" @onclick="() => _deleteTarget = null">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeleteClient" disabled="@_deleting">
+                        @if (_deleting)
+                        {
+                            <span class="spinner"></span>
+                        }
+                        else
+                        {
+
+                            <span>Delete</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<ST10439147_PRO7311_POE.Models.Clients> _clients = new();
+    private bool _loading = true;
+    private bool _sessionChecked;
+    private bool _deleting;
+    private ST10439147_PRO7311_POE.Models.Clients? _deleteTarget;
+    private string _alertMsg = string.Empty;
+    private string _alertClass = string.Empty;
+
+    private bool _showForm;
+    private bool _formSaving;
+    private bool _fSubmitted;
+    private int _editId;
+    private string _fName = string.Empty;
+    private string _fContact = string.Empty;
+    private string _fRegion = string.Empty;
+    private string _formError = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_sessionChecked)
+        {
+            _sessionChecked = true;
+            if (!UserState.IsLoggedIn)
+            {
+                try
+                {
+                    var result = await SessionStorage.GetAsync<User>("currentUser");
+                    if (result.Success && result.Value != null)
+                        UserState.CurrentUser = result.Value;
+                    else
+                    { Nav.NavigateTo("/login"); return; }
+                }
+                catch { Nav.NavigateTo("/login"); return; }
+            }
+            await Load();
+            StateHasChanged();
+        }
+    }
+
+    private async Task Load()
+    {
+        _loading = true;
+        try { _clients = await Http.GetFromJsonAsync<List<ST10439147_PRO7311_POE.Models.Clients>>("api/v1/clients/All") ?? new(); }
+        catch { ShowAlert("Failed to load clients.", "alert-danger"); }
+        finally { _loading = false; }
+    }
+
+    private void OpenCreate()
+    {
+        _editId = 0; _fName = _fContact = _fRegion = _formError = string.Empty;
+        _fSubmitted = false; _showForm = true;
+    }
+
+    private void OpenEdit(ST10439147_PRO7311_POE.Models.Clients c)
+    {
+        _editId = c.Id; _fName = c.Name; _fContact = c.ContactDetails; _fRegion = c.Region;
+        _formError = string.Empty; _fSubmitted = false; _showForm = true;
+    }
+
+    private async Task SaveClient()
+    {
+        _fSubmitted = true;
+        if (string.IsNullOrWhiteSpace(_fName) || string.IsNullOrWhiteSpace(_fRegion)) return;
+
+        _formSaving = true;
+        try
+        {
+            var payload = new { Name = _fName, ContactDetails = _fContact, Region = _fRegion };
+            System.Net.Http.HttpResponseMessage resp;
+            if (_editId > 0)
+                resp = await Http.PutAsJsonAsync($"api/v1/clients/Update/{_editId}", payload);
+            else
+                resp = await Http.PostAsJsonAsync("api/v1/clients/Create", payload);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                _showForm = false;
+                ShowAlert(_editId > 0 ? "Client updated." : "Client created.", "alert-success");
+                await Load();
+            }
+            else { _formError = "Save failed. Please try again."; }
+        }
+        catch { _formError = "An error occurred."; }
+        finally { _formSaving = false; }
+    }
+
+    private void ConfirmDelete(ST10439147_PRO7311_POE.Models.Clients c) => _deleteTarget = c;
+
+    private async Task DeleteClient()
+    {
+        if (_deleteTarget == null) return;
+        _deleting = true;
+        try
+        {
+            var resp = await Http.DeleteAsync($"api/v1/clients/Delete/{_deleteTarget.Id}");
+            if (resp.IsSuccessStatusCode)
+            {
+                ShowAlert($"Client '{_deleteTarget.Name}' deleted.", "alert-success");
+                _clients.Remove(_deleteTarget); _deleteTarget = null;
+            }
+            else { ShowAlert("Delete failed. The client may have contracts attached.", "alert-danger"); _deleteTarget = null; }
+        }
+        catch { ShowAlert("An error occurred.", "alert-danger"); }
+        finally { _deleting = false; }
+    }
+
+    private void ShowAlert(string msg, string cls) { _alertMsg = msg; _alertClass = cls; }
+}
