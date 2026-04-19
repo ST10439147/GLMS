@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE.DTOs;
+using ST10439147_PRO7311_POE.Extensions;
 using ST10439147_PRO7311_POE.Models;
 using ST10439147_PRO7311_POE.Services;
 
@@ -10,31 +11,21 @@ public class ContractController : ControllerBase
 {
     private readonly IContractService _contractService;
     private readonly IFileService _fileService;
-    private readonly LoginDTO _loginDto;
 
-    public ContractController(IContractService contractService, IFileService fileService, LoginDTO loginDto)
+    public ContractController(IContractService contractService, IFileService fileService)
     {
         _contractService = contractService;
         _fileService = fileService;
-        _loginDto = loginDto;
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    private bool IsLoggedIn => _loginDto.AccessLevel > 0;
-    private bool IsManager => _loginDto.AccessLevel == (int)UserRole.Manager
-                              || _loginDto.AccessLevel == (int)UserRole.Admin;
-    private bool IsAdmin => _loginDto.AccessLevel == (int)UserRole.Admin;
 
     private static ContractResponseDto Deny(string message) =>
         new() { Message = message, Status = false };
-
-    // ── Endpoints ─────────────────────────────────────────────────────────────
 
     // Manager+ required: create a contract
     [HttpPost("Create")]
     public async Task<ActionResult<ContractResponseDto>> Create([FromBody] Contract contract)
     {
-        if (!IsManager)
+        if (!this.IsManager())
             return Ok(Deny("Access denied – Managers and Admins only."));
 
         var result = await _contractService.CreateContract(contract);
@@ -45,7 +36,7 @@ public class ContractController : ControllerBase
     [HttpGet("Get/{id}")]
     public async Task<ActionResult<ContractResponseDto>> Get(int id)
     {
-        if (!IsLoggedIn)
+        if (!this.IsLoggedIn())
             return Ok(Deny("Access denied – please log in."));
 
         var result = await _contractService.GetContract(id);
@@ -56,7 +47,7 @@ public class ContractController : ControllerBase
     [HttpGet("All")]
     public async Task<ActionResult<List<Contract>>> All()
     {
-        if (!IsLoggedIn)
+        if (!this.IsLoggedIn())
             return Ok(Deny("Access denied – please log in."));
 
         var contracts = await _contractService.GetAllContracts();
@@ -67,7 +58,7 @@ public class ContractController : ControllerBase
     [HttpPut("Update/{id}")]
     public async Task<ActionResult<ContractResponseDto>> Update(int id, [FromBody] Contract contract)
     {
-        if (!IsManager)
+        if (!this.IsManager())
             return Ok(Deny("Access denied – Managers and Admins only."));
 
         var result = await _contractService.UpdateContract(id, contract);
@@ -78,7 +69,7 @@ public class ContractController : ControllerBase
     [HttpPut("SetStatus/{id}/{status}")]
     public async Task<ActionResult<ContractResponseDto>> SetStatus(int id, ContractStatus status)
     {
-        if (!IsManager)
+        if (!this.IsManager())
             return Ok(Deny("Access denied – Managers and Admins only."));
 
         var result = await _contractService.SetContractStatus(id, status);
@@ -89,7 +80,7 @@ public class ContractController : ControllerBase
     [HttpDelete("Delete/{id}")]
     public async Task<ActionResult<ContractResponseDto>> Delete(int id)
     {
-        if (!IsAdmin)
+        if (!this.IsAdmin())
             return Ok(Deny("Access denied – Admins only."));
 
         var result = await _contractService.DeleteContract(id);
@@ -103,7 +94,7 @@ public class ContractController : ControllerBase
         [FromQuery] DateTime? startTo,
         [FromQuery] ContractStatus? status)
     {
-        if (!IsLoggedIn)
+        if (!this.IsLoggedIn())
             return Ok(Deny("Access denied – please log in."));
 
         var results = await _contractService.SearchContracts(startFrom, startTo, status);
@@ -115,7 +106,7 @@ public class ContractController : ControllerBase
     public async Task<ActionResult<ContractResponseDto>> UploadAgreement(
         int contractId, IFormFile file)
     {
-        if (!IsManager)
+        if (!this.IsManager())
             return Ok(Deny("Access denied – Managers and Admins only."));
 
         try
@@ -135,7 +126,7 @@ public class ContractController : ControllerBase
     [HttpGet("DownloadAgreement/{contractId}")]
     public async Task<IActionResult> DownloadAgreement(int contractId)
     {
-        if (!IsLoggedIn)
+        if (!this.IsLoggedIn())
             return Unauthorized("Please log in to download agreements.");
 
         var result = await _contractService.GetContract(contractId);
@@ -156,7 +147,7 @@ public class ContractController : ControllerBase
     public async Task<ActionResult<ServiceRequestResponseDto>> SubmitRequest(
         [FromBody] ServiceRequest request)
     {
-        if (!IsLoggedIn)
+        if (!this.IsLoggedIn())
             return Ok(new ServiceRequestResponseDto { Message = "Access denied – please log in.", Status = false });
 
         var result = await _contractService.CreateServiceRequest(request);
@@ -167,7 +158,7 @@ public class ContractController : ControllerBase
     [HttpGet("ServiceRequests/{contractId}")]
     public async Task<ActionResult<List<ServiceRequest>>> GetServiceRequests(int contractId)
     {
-        if (!IsLoggedIn)
+        if (!this.IsLoggedIn())
             return Ok(Deny("Access denied – please log in."));
 
         var results = await _contractService.GetServiceRequestsByContract(contractId);

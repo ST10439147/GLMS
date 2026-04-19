@@ -12,8 +12,8 @@ using ST10439147_PRO7311_POE.Data;
 namespace ST10439147_PRO7311_POE.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260419123701_Clients")]
-    partial class Clients
+    [Migration("20260419135920_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -25,20 +25,31 @@ builder.Services.AddScoped<UserState>();
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Required by OpenExchangeStrategy (IHttpClientFactory) and any named clients
 builder.Services.AddHttpClient();
+
+// ── Register the handler that stamps X-Access-Level on every API request ──
+builder.Services.AddScoped<AccessLevelHandler>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IContractService, ContractService>();
+builder.Services.AddScoped<IClientService, ClientService>();       
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<ICurrencyConversionStrategy, OpenExchangeStrategy>();
 
 builder.Services.AddControllers();
 
+// ── Replace the bare HttpClient registration with one that uses the handler ──
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetService<NavigationManager>();
     var baseUrl = nav?.BaseUri ?? "https://localhost:7181/";
-    return new HttpClient { BaseAddress = new Uri(baseUrl) };
+
+    // Pull the handler from DI (it has access to UserState)
+    var handler = sp.GetRequiredService<AccessLevelHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+
+    return new HttpClient(handler) { BaseAddress = new Uri(baseUrl) };
 });
 
 var app = builder.Build();
@@ -47,7 +58,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
