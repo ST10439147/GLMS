@@ -90,10 +90,37 @@ namespace ST10439147_PRO7311_POE.Services
         public async Task<ContractResponseDto?> DeleteContract(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
-            var contract = await ctx.Contracts.FindAsync(id);
+
+            // Load contract together with its service requests so we can validate
+            var contract = await ctx.Contracts
+                .Include(c => c.ServiceRequests)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (contract == null)
                 return new ContractResponseDto { Message = $"Contract {id} not found.", Status = false };
 
+            // A contract may only be deleted when ALL its service requests are
+            // either Rejected or Completed (or there are none).
+            var blocking = contract.ServiceRequests
+                .Where(sr => sr.Status != ServiceRequestStatus.Rejected &&
+                             sr.Status != ServiceRequestStatus.Completed)
+                .ToList();
+
+            if (blocking.Any())
+            {
+                var ids = string.Join(", ", blocking.Select(sr => $"#{sr.Id} ({sr.Status})"));
+                return new ContractResponseDto
+                {
+                    Message = $"Cannot delete contract '{contract.Title}'. " +
+                              $"The following service request(s) must be Rejected or Completed first: {ids}.",
+                    Status = false
+                };
+            }
+
+            // Explicitly remove child service requests before removing the contract.
+            // This is required because the FK on ServiceRequest.ContractId is non-nullable,
+            // so EF Core cannot orphan them — it must delete them or throw.
+            ctx.ServiceRequests.RemoveRange(contract.ServiceRequests);
             ctx.Contracts.Remove(contract);
             await ctx.SaveChangesAsync();
 
@@ -196,6 +223,43 @@ namespace ST10439147_PRO7311_POE.Services
             await ctx.SaveChangesAsync();
 
             var msg = $"Service request #{requestId} status → {newStatus}";
+            if (sr.Contract != null)
+                await Notify(msg, sr.ContractId, sr.Contract.Status);
+
+            return new ServiceRequestResponseDto { ServiceRequest = sr, Message = msg, Status = true };
+        }
+
+        public async Task<ServiceRequestResponseDto> DeleteServiceRequest(int requestId)
+        {
+            using var ctx = _dbFactory.CreateDbContext();
+            var sr = await ctx.ServiceRequests
+                .Include(s => s.Contract)
+                .FirstOrDefaultAsync(s => s.Id == requestId);
+
+            if (sr == null)
+                return new ServiceRequestResponseDto
+                {
+                    Message = $"Service request {requestId} not found.",
+                    Status = false
+                };
+
+            // Only allow deletion when the request is Rejected or Completed
+            if (sr.Status != ServiceRequestStatus.Rejected &&
+                sr.Status != ServiceRequestStatus.Completed)
+            {
+                return new ServiceRequestResponseDto
+                {
+                    Message = $"Service request #{requestId} cannot be deleted. " +
+                              $"Its current status is '{sr.Status}'. " +
+                              "Only Rejected or Completed requests may be deleted.",
+                    Status = false
+                };
+            }
+
+            ctx.ServiceRequests.Remove(sr);
+            await ctx.SaveChangesAsync();
+
+            var msg = $"Service request #{requestId} deleted.";
             if (sr.Contract != null)
                 await Notify(msg, sr.ContractId, sr.Contract.Status);
 

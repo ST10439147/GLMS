@@ -169,4 +169,19 @@ public class ContractController : ControllerBase
         var result = await _contractService.SetServiceRequestStatus(requestId, status);
         return Ok(result);
     }
+
+    // Admin only: delete a service request (must be Rejected or Completed first)
+    [HttpDelete("DeleteRequest/{requestId}")]
+    public async Task<ActionResult<ServiceRequestResponseDto>> DeleteRequest(int requestId)
+    {
+        if (!this.IsAdmin())
+            return Ok(new ServiceRequestResponseDto
+            {
+                Message = "Access denied – Admins only.",
+                Status = false
+            });
+
+        var result = await _contractService.DeleteServiceRequest(requestId);
+        return Ok(result);
+    }
 }

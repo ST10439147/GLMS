@@ -62,10 +62,43 @@ namespace ST10439147_PRO7311_POE.Services
         public async Task<ClientResponseDto> DeleteClient(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
-            var client = await ctx.Clients.FindAsync(id);
+
+            // Load client → contracts → service requests so we can validate and
+            // explicitly remove children (non-nullable FKs prevent EF from orphaning them).
+            var client = await ctx.Clients
+                .Include(c => c.Contracts)
+                    .ThenInclude(c => c.ServiceRequests)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
             if (client == null)
                 return new ClientResponseDto { Message = $"Client {id} not found.", Status = false };
 
+            // A client may only be deleted when ALL their contracts are
+            // either Expired or Completed (Draft / Active / OnHold block deletion).
+            var blocking = client.Contracts
+                .Where(c => c.Status != ContractStatus.Expired &&
+                            c.Status != ContractStatus.Completed)
+                .ToList();
+
+            if (blocking.Any())
+            {
+                var details = string.Join(", ", blocking.Select(c => $"#{c.Id} '{c.Title}' ({c.Status})"));
+                return new ClientResponseDto
+                {
+                    Message = $"Cannot delete client '{client.Name}'. " +
+                              $"The following contract(s) must be Expired or Completed first: {details}.",
+                    Status = false
+                };
+            }
+
+            // Explicitly delete in leaf-first order:
+            // ServiceRequests → Contracts → Client
+            var allServiceRequests = client.Contracts
+                .SelectMany(c => c.ServiceRequests)
+                .ToList();
+
+            ctx.ServiceRequests.RemoveRange(allServiceRequests);
+            ctx.Contracts.RemoveRange(client.Contracts);
             ctx.Clients.Remove(client);
             await ctx.SaveChangesAsync();
 

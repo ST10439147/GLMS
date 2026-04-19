@@ -5,7 +5,7 @@ using static ST10439147_PRO7311_POE.Models.Clients;
 namespace ST10439147_PRO7311_POE.Models
 {
     // Status machine: Draft → Active → Expired | OnHold
-    public enum ContractStatus { Draft, Active, Expired, OnHold }
+    public enum ContractStatus { Draft, Active, Expired, OnHold, Completed }
 
     [Table("Contract")]
     public class Contract
