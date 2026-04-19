@@ -1,12 +1,10 @@
 ﻿namespace ST10439147_PRO7311_POE.Services
 {
-    // ── File Handling (Rubric: "Greatly Exceeds" – UUID naming, strict PDF only, download) ──
-
     public interface IFileService
     {
         /// <summary>
         /// Validates and saves an uploaded PDF to the server's UploadedFiles folder.
-        /// Returns the saved file path.
+        /// Returns the saved relative web path.
         /// </summary>
         Task<string> SaveSignedAgreement(IFormFile file);
 
@@ -19,9 +17,8 @@
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<FileService> _logger;
 
-        // Allowed MIME types and extensions – PDF only per rubric
-        private static readonly string[] AllowedExtensions = { ".pdf" };
-        private static readonly string[] AllowedMimeTypes = { "application/pdf" };
+        // PDF magic bytes: every valid PDF file starts with "%PDF"
+        private static readonly byte[] PdfMagicBytes = { 0x25, 0x50, 0x44, 0x46 }; // %PDF
 
         public FileService(IWebHostEnvironment env, ILogger<FileService> logger)
         {
@@ -31,23 +28,31 @@
 
         public async Task<string> SaveSignedAgreement(IFormFile file)
         {
-            // ── Strict validation (Rubric: PDF only) ────────────────────────
             if (file == null || file.Length == 0)
                 throw new InvalidOperationException("No file was uploaded.");
 
+            // ── Extension check ─────────────────────────────────────────────
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-            if (!AllowedExtensions.Contains(extension))
+            if (extension != ".pdf")
                 throw new InvalidOperationException(
                     $"Invalid file type '{extension}'. Only .pdf files are allowed.");
 
-            if (!AllowedMimeTypes.Contains(file.ContentType.ToLowerInvariant()))
-                throw new InvalidOperationException(
-                    $"Invalid content type '{file.ContentType}'. Only PDF files are allowed.");
+            // ── Magic bytes check (more reliable than ContentType) ───────────
+            // Browsers and HTTP clients often send "application/octet-stream"
+            // instead of "application/pdf", so we validate the file content
+            // itself by checking the PDF signature bytes (%PDF).
+            using (var peekStream = file.OpenReadStream())
+            {
+                var header = new byte[4];
+                var bytesRead = await peekStream.ReadAsync(header, 0, 4);
+                if (bytesRead < 4 || !header.SequenceEqual(PdfMagicBytes))
+                    throw new InvalidOperationException(
+                        "The uploaded file is not a valid PDF.");
+            }
 
-            // ── UUID naming to prevent overwrites (Rubric: "Greatly Exceeds") ─
+            // ── UUID naming to prevent overwrites ────────────────────────────
             var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "agreements");
-            Directory.CreateDirectory(uploadsFolder); // ensure folder exists
+            Directory.CreateDirectory(uploadsFolder);
 
             var uniqueFileName = $"{Guid.NewGuid()}{extension}";
             var fullPath = Path.Combine(uploadsFolder, uniqueFileName);

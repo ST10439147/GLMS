@@ -25,7 +25,17 @@ namespace ST10439147_PRO7311_POE.DTOs
     public class CurrencyRateDto
     {
         public decimal Rate { get; set; }
-        public decimal UsdAmount { get; set; }
-        public decimal ZarAmount { get; set; }
+
+        /// <summary>Source currency code, e.g. "USD"</summary>
+        public string FromCurrency { get; set; } = "USD";
+
+        /// <summary>Target currency code, e.g. "ZAR"</summary>
+        public string ToCurrency { get; set; } = "ZAR";
+
+        /// <summary>The input amount in FromCurrency</summary>
+        public decimal FromAmount { get; set; }
+
+        /// <summary>The converted amount in ToCurrency</summary>
+        public decimal ToAmount { get; set; }
     }
 }

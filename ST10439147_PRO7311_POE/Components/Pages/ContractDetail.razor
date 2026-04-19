@@ -82,7 +82,7 @@ else
                             @if (!string.IsNullOrEmpty(_contract.SignedAgreementFileName))
                             {
                                 <a class="btn btn-sm btn-outline-primary"
-                                       href="api/v1/contract/DownloadAgreement/@Id" target="_blank">
+                                       href="/@_contract.SignedAgreementPath" target="_blank" download="@_contract.SignedAgreementFileName">
                                     📥 @_contract.SignedAgreementFileName
                                 </a>
                             }
@@ -155,7 +155,6 @@ else
                                 }
                                 else
                                 {
-
                                     <span>Submit Request</span>
                                 }
                             </button>
@@ -196,7 +195,31 @@ else
                                         <td>$@sr.CostUSD.ToString("N2")</td>
                                         <td>R @sr.CostZAR.ToString("N2")</td>
                                         <td style="font-size:.82rem;color:#6c757d">@sr.ExchangeRateUsed.ToString("F4")</td>
-                                        <td><span class="badge badge-@sr.Status.ToString().ToLower()">@sr.Status</span></td>
+                                        <td>
+                                            @if (UserState.IsManager)
+                                            {
+                                                <div style="display:flex;align-items:center;gap:.4rem">
+                                                    <select class="form-select form-select-sm"
+                                                            style="min-width:130px"
+                                                            disabled="@(_srStatusChangingId == sr.Id)"
+                                                            value="@sr.Status"
+                                                            @onchange="e => ChangeRequestStatus(sr, e)">
+                                                        @foreach (var s in Enum.GetValues<ServiceRequestStatus>())
+                                                        {
+                                                            <option value="@s">@s</option>
+                                                        }
+                                                    </select>
+                                                    @if (_srStatusChangingId == sr.Id)
+                                                    {
+                                                        <span class="spinner dark"></span>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-@sr.Status.ToString().ToLower()">@sr.Status</span>
+                                            }
+                                        </td>
                                         <td style="font-size:.85rem">@sr.RequestDate.ToString("dd MMM yyyy")</td>
                                     </tr>
                                 }
@@ -219,6 +242,9 @@ else
     private bool _statusChanging;
     private bool _showSrForm;
     private bool _srSaving;
+
+    // Tracks which service request row is currently saving (-1 = none)
+    private int _srStatusChangingId = -1;
 
     private string _srDescription = string.Empty;
     private decimal _srCostUsd;
@@ -318,6 +344,38 @@ else
         }
         catch { _srError = "An error occurred."; }
         finally { _srSaving = false; }
+    }
+
+    private async Task ChangeRequestStatus(ServiceRequest sr, ChangeEventArgs e)
+    {
+        if (!Enum.TryParse<ServiceRequestStatus>(e.Value?.ToString(), out var newStatus))
+            return;
+
+        if (newStatus == sr.Status) return;
+
+        _srStatusChangingId = sr.Id;
+        StateHasChanged(); // show spinner immediately
+        try
+        {
+            var resp = await Http.PutAsync(
+                $"api/v1/contract/SetRequestStatus/{sr.Id}/{newStatus}", null);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                sr.Status = newStatus;
+                ShowAlert($"Request #{sr.Id} updated to {newStatus}.", "alert-success");
+            }
+            else
+            {
+                ShowAlert("Status update failed.", "alert-danger");
+            }
+        }
+        catch { ShowAlert("An error occurred.", "alert-danger"); }
+        finally
+        {
+            _srStatusChangingId = -1;
+            StateHasChanged();
+        }
     }
 
     private async Task ChangeStatus(ContractStatus newStatus)

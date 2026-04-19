@@ -21,7 +21,6 @@ public class ContractController : ControllerBase
     private static ContractResponseDto Deny(string message) =>
         new() { Message = message, Status = false };
 
-    // Manager+ required: create a contract
     [HttpPost("Create")]
     public async Task<ActionResult<ContractResponseDto>> Create([FromBody] Contract contract)
     {
@@ -32,7 +31,6 @@ public class ContractController : ControllerBase
         return Ok(result);
     }
 
-    // Any logged-in user: view a single contract
     [HttpGet("Get/{id}")]
     public async Task<ActionResult<ContractResponseDto>> Get(int id)
     {
@@ -43,7 +41,6 @@ public class ContractController : ControllerBase
         return result == null ? NotFound() : Ok(result);
     }
 
-    // Any logged-in user: view all contracts
     [HttpGet("All")]
     public async Task<ActionResult<List<Contract>>> All()
     {
@@ -54,7 +51,6 @@ public class ContractController : ControllerBase
         return Ok(contracts);
     }
 
-    // Manager+ required: edit a contract
     [HttpPut("Update/{id}")]
     public async Task<ActionResult<ContractResponseDto>> Update(int id, [FromBody] Contract contract)
     {
@@ -65,7 +61,6 @@ public class ContractController : ControllerBase
         return Ok(result);
     }
 
-    // Manager+ required: change contract status
     [HttpPut("SetStatus/{id}/{status}")]
     public async Task<ActionResult<ContractResponseDto>> SetStatus(int id, ContractStatus status)
     {
@@ -76,7 +71,6 @@ public class ContractController : ControllerBase
         return Ok(result);
     }
 
-    // Admin only: delete a contract
     [HttpDelete("Delete/{id}")]
     public async Task<ActionResult<ContractResponseDto>> Delete(int id)
     {
@@ -87,7 +81,6 @@ public class ContractController : ControllerBase
         return result == null ? NotFound() : Ok(result);
     }
 
-    // Any logged-in user: search/filter contracts
     [HttpGet("Search")]
     public async Task<ActionResult<List<Contract>>> Search(
         [FromQuery] DateTime? startFrom,
@@ -101,7 +94,6 @@ public class ContractController : ControllerBase
         return Ok(results);
     }
 
-    // Manager+ required: upload signed agreement PDF
     [HttpPost("UploadAgreement/{contractId}")]
     public async Task<ActionResult<ContractResponseDto>> UploadAgreement(
         int contractId, IFormFile file)
@@ -122,7 +114,6 @@ public class ContractController : ControllerBase
         }
     }
 
-    // Any logged-in user: download a signed agreement
     [HttpGet("DownloadAgreement/{contractId}")]
     public async Task<IActionResult> DownloadAgreement(int contractId)
     {
@@ -142,7 +133,6 @@ public class ContractController : ControllerBase
             result.Contract.SignedAgreementFileName ?? "agreement.pdf");
     }
 
-    // Any logged-in user: submit a service request
     [HttpPost("SubmitRequest")]
     public async Task<ActionResult<ServiceRequestResponseDto>> SubmitRequest(
         [FromBody] ServiceRequest request)
@@ -154,7 +144,6 @@ public class ContractController : ControllerBase
         return Ok(result);
     }
 
-    // Any logged-in user: view service requests for a contract
     [HttpGet("ServiceRequests/{contractId}")]
     public async Task<ActionResult<List<ServiceRequest>>> GetServiceRequests(int contractId)
     {
@@ -163,5 +152,21 @@ public class ContractController : ControllerBase
 
         var results = await _contractService.GetServiceRequestsByContract(contractId);
         return Ok(results);
+    }
+
+    // Manager+ required: update a service request's status
+    [HttpPut("SetRequestStatus/{requestId}/{status}")]
+    public async Task<ActionResult<ServiceRequestResponseDto>> SetRequestStatus(
+        int requestId, ServiceRequestStatus status)
+    {
+        if (!this.IsManager())
+            return Ok(new ServiceRequestResponseDto
+            {
+                Message = "Access denied – Managers and Admins only.",
+                Status = false
+            });
+
+        var result = await _contractService.SetServiceRequestStatus(requestId, status);
+        return Ok(result);
     }
 }

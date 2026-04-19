@@ -6,9 +6,6 @@ using ST10439147_PRO7311_POE.Hubs;
 using ST10439147_PRO7311_POE.Models;
 namespace ST10439147_PRO7311_POE.Services
 {
-    // ContractService is the Subject in the Observer pattern (SignalR).
-    // Validation logic is fully separated from controllers (Rubric: "Greatly Exceeds").
-
     public class ContractService : IContractService
     {
         private readonly IHubContext<NotificationHub> _hubContext;
@@ -27,7 +24,7 @@ namespace ST10439147_PRO7311_POE.Services
         public async Task<ContractResponseDto> CreateContract(Contract contract)
         {
             using var ctx = _dbFactory.CreateDbContext();
-            contract.Status = ContractStatus.Draft; // Always start as Draft
+            contract.Status = ContractStatus.Draft;
             ctx.Contracts.Add(contract);
             await ctx.SaveChangesAsync();
 
@@ -105,28 +102,22 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = contract, Message = msg, Status = true };
         }
 
-        // ── Search / Filter (LINQ - Rubric requirement) ────────────────────────
         public async Task<List<Contract>> SearchContracts(
             DateTime? startFrom, DateTime? startTo, ContractStatus? status)
         {
             using var ctx = _dbFactory.CreateDbContext();
-
-            // Build LINQ query dynamically
             IQueryable<Contract> query = ctx.Contracts.Include(c => c.Client);
 
             if (startFrom.HasValue)
                 query = query.Where(c => c.StartDate >= startFrom.Value);
-
             if (startTo.HasValue)
                 query = query.Where(c => c.StartDate <= startTo.Value);
-
             if (status.HasValue)
                 query = query.Where(c => c.Status == status.Value);
 
             return await query.OrderBy(c => c.StartDate).ToListAsync();
         }
 
-        // ── File Handling ──────────────────────────────────────────────────────
         public async Task<ContractResponseDto> SaveSignedAgreement(
             int contractId, string filePath, string originalFileName)
         {
@@ -148,6 +139,7 @@ namespace ST10439147_PRO7311_POE.Services
         }
 
         // ── Service Requests ───────────────────────────────────────────────────
+
         public async Task<ServiceRequestResponseDto> CreateServiceRequest(ServiceRequest request)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -160,8 +152,6 @@ namespace ST10439147_PRO7311_POE.Services
                     Status = false
                 };
 
-            // ── Workflow validation (Rubric: "Greatly Exceeds") ────────────────
-            // Block if Expired or OnHold; only Active (and Draft) contracts proceed
             if (contract.Status == ContractStatus.Expired || contract.Status == ContractStatus.OnHold)
                 return new ServiceRequestResponseDto
                 {
@@ -185,6 +175,31 @@ namespace ST10439147_PRO7311_POE.Services
                 .Where(sr => sr.ContractId == contractId)
                 .Include(sr => sr.Contract)
                 .ToListAsync();
+        }
+
+        public async Task<ServiceRequestResponseDto> SetServiceRequestStatus(
+            int requestId, ServiceRequestStatus newStatus)
+        {
+            using var ctx = _dbFactory.CreateDbContext();
+            var sr = await ctx.ServiceRequests
+                .Include(s => s.Contract)
+                .FirstOrDefaultAsync(s => s.Id == requestId);
+
+            if (sr == null)
+                return new ServiceRequestResponseDto
+                {
+                    Message = $"Service request {requestId} not found.",
+                    Status = false
+                };
+
+            sr.Status = newStatus;
+            await ctx.SaveChangesAsync();
+
+            var msg = $"Service request #{requestId} status → {newStatus}";
+            if (sr.Contract != null)
+                await Notify(msg, sr.ContractId, sr.Contract.Status);
+
+            return new ServiceRequestResponseDto { ServiceRequest = sr, Message = msg, Status = true };
         }
 
         // ── SignalR broadcast (Observer pattern) ───────────────────────────────

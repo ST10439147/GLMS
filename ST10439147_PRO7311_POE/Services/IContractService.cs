@@ -21,5 +21,6 @@ namespace ST10439147_PRO7311_POE.Services
         // Service Requests
         Task<ServiceRequestResponseDto> CreateServiceRequest(ServiceRequest request);
         Task<List<ServiceRequest>> GetServiceRequestsByContract(int contractId);
+        Task<ServiceRequestResponseDto> SetServiceRequestStatus(int requestId, ServiceRequestStatus newStatus);
     }
 }
