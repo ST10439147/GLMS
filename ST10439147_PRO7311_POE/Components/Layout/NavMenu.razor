@@ -1,5 +1,6 @@
 ﻿@inject UserState UserState
 @inject NavigationManager Nav
+@inject ProtectedSessionStorage SessionStorage
 
 @* Don't render any nav links until auth is confirmed — prevents role-specific
    menu items (like Administration) flashing before the session check runs. *@
@@ -64,9 +65,10 @@
 }
 
 @code {
-    private void Logout()
+    private async Task Logout()
     {
-        UserState.CurrentUser = null;
+        await SessionStorage.DeleteAsync("currentUser"); 
+        UserState.CurrentUser = null;                     
         Nav.NavigateTo("/login", forceLoad: true);
     }
 }
