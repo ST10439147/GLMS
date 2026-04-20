@@ -1,17 +1,5 @@
 ﻿namespace ST10439147_PRO7311_POE.Services
 {
-    public interface IFileService
-    {
-        /// <summary>
-        /// Validates and saves an uploaded PDF to the server's UploadedFiles folder.
-        /// Returns the saved relative web path.
-        /// </summary>
-        Task<string> SaveSignedAgreement(IFormFile file);
-
-        /// <summary>Returns the absolute file path if it exists, null otherwise.</summary>
-        string? GetFilePath(string storedPath);
-    }
-
     public class FileService : IFileService
     {
         private readonly IWebHostEnvironment _env;
@@ -41,14 +29,20 @@
             // Browsers and HTTP clients often send "application/octet-stream"
             // instead of "application/pdf", so we validate the file content
             // itself by checking the PDF signature bytes (%PDF).
-            using (var peekStream = file.OpenReadStream())
-            {
-                var header = new byte[4];
-                var bytesRead = await peekStream.ReadAsync(header, 0, 4);
-                if (bytesRead < 4 || !header.SequenceEqual(PdfMagicBytes))
-                    throw new InvalidOperationException(
-                        "The uploaded file is not a valid PDF.");
-            }
+            // NOTE: We do NOT wrap peekStream in a using block here — disposing
+            // it would close the underlying stream, causing CopyToAsync below to
+            // throw ObjectDisposedException. Instead we seek back to position 0
+            // after reading the header so the full file can still be copied.
+            var peekStream = file.OpenReadStream();
+            var header = new byte[4];
+            var bytesRead = await peekStream.ReadAsync(header, 0, 4);
+            if (bytesRead < 4 || !header.SequenceEqual(PdfMagicBytes))
+                throw new InvalidOperationException(
+                    "The uploaded file is not a valid PDF.");
+
+            // Reset to the beginning so CopyToAsync copies the complete file.
+            if (peekStream.CanSeek)
+                peekStream.Position = 0;
 
             // ── UUID naming to prevent overwrites ────────────────────────────
             var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "agreements");
@@ -59,7 +53,7 @@
 
             using (var stream = new FileStream(fullPath, FileMode.Create))
             {
-                await file.CopyToAsync(stream);
+                await peekStream.CopyToAsync(stream);
             }
 
             _logger.LogInformation("Saved signed agreement: {FileName} → {Path}",

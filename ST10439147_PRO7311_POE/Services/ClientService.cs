@@ -73,11 +73,10 @@ namespace ST10439147_PRO7311_POE.Services
             if (client == null)
                 return new ClientResponseDto { Message = $"Client {id} not found.", Status = false };
 
-            // A client may only be deleted when ALL their contracts are
-            // either Expired or Completed (Draft / Active / OnHold block deletion).
+            // A client may only be deleted when ALL their contracts are Expired.
+            // Draft, Active, and OnHold contracts all block deletion.
             var blocking = client.Contracts
-                .Where(c => c.Status != ContractStatus.Expired &&
-                            c.Status != ContractStatus.OnHold)
+                .Where(c => c.Status != ContractStatus.Expired)
                 .ToList();
 
             if (blocking.Any())
@@ -86,7 +85,7 @@ namespace ST10439147_PRO7311_POE.Services
                 return new ClientResponseDto
                 {
                     Message = $"Cannot delete client '{client.Name}'. " +
-                              $"The following contract(s) must be Expired or Completed first: {details}.",
+                              $"The following contract(s) must be Expired first: {details}.",
                     Status = false
                 };
             }
