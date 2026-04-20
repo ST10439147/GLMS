@@ -1,8 +1,6 @@
 using GLMS.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
-using Polly;
-using Polly.Extensions.Http;
 using ST10439147_PRO7311_POE.Components;
 using ST10439147_PRO7311_POE.Data;
 using ST10439147_PRO7311_POE.DTOs;
@@ -10,6 +8,16 @@ using ST10439147_PRO7311_POE.Hubs;
 using ST10439147_PRO7311_POE.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Resolve the Data folder path at runtime (works on any machine)
+var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "Data");
+Directory.CreateDirectory(dataFolder);
+var mdfPath = Path.Combine(dataFolder, "ST10439147_PRO7311_POE.mdf");
+var connectionString = $"Server=(localdb)\\mssqllocaldb;" +
+                       $"AttachDbFilename={mdfPath};" +
+                       $"Database=ST10439147_GLMS_DB;" +
+                       $"Integrated Security=True;" +
+                       $"MultipleActiveResultSets=true";
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -23,7 +31,7 @@ builder.Services.AddScoped<LoginDTO>();
 builder.Services.AddScoped<UserState>();
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
 // Required by OpenExchangeStrategy (IHttpClientFactory) and any named clients
 builder.Services.AddHttpClient();
@@ -48,7 +56,6 @@ builder.Services.AddScoped(sp =>
     var nav = sp.GetService<NavigationManager>();
     var baseUrl = nav?.BaseUri ?? "https://localhost:7181/";
 
-    // Pull the handler from DI (it has access to UserState)
     var handler = sp.GetRequiredService<AccessLevelHandler>();
     handler.InnerHandler = new HttpClientHandler();
 
@@ -58,10 +65,6 @@ builder.Services.AddScoped(sp =>
 var app = builder.Build();
 
 // ── Pre-warm the database connection pool ────────────────────────────────────
-// The first SQL Server connection after app start has a 2-3 second cold-start
-// cost (TCP handshake, TLS, EF model validation). By opening a throwaway
-// connection here — while the app is starting up in the background — the pool
-// is ready before the first user clicks Login, so their request is instant.
 _ = Task.Run(async () =>
 {
     try

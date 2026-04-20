@@ -11,14 +11,21 @@ namespace ST10439147_PRO7311_POE.Data
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            var config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
-                .Build();
+            // Resolve the absolute path to the Data folder at design time
+            var dataFolder = Path.Combine(Directory.GetCurrentDirectory(), "Data");
+            var mdfPath = Path.Combine(dataFolder, "ST10439147_PRO7311_POE.mdf");
+
+            // Ensure the Data folder exists
+            Directory.CreateDirectory(dataFolder);
+
+            var connectionString = $"Server=(localdb)\\mssqllocaldb;" +
+                                   $"AttachDbFilename={mdfPath};" +
+                                   $"Database=ST10439147_GLMS_DB;" +
+                                   $"Integrated Security=True;" +
+                                   $"MultipleActiveResultSets=true";
 
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-            optionsBuilder.UseSqlServer(
-                config.GetConnectionString("DefaultConnection"));
+            optionsBuilder.UseSqlServer(connectionString);
 
             return new AppDbContext(optionsBuilder.Options);
         }
