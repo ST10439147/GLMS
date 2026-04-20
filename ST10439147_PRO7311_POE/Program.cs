@@ -33,7 +33,7 @@ builder.Services.AddScoped<AccessLevelHandler>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IContractService, ContractService>();
-builder.Services.AddScoped<IClientService, ClientService>();       // ← NEW
+builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<ICurrencyConversionStrategy, OpenExchangeStrategy>();
 
@@ -56,6 +56,27 @@ builder.Services.AddScoped(sp =>
 });
 
 var app = builder.Build();
+
+// ── Pre-warm the database connection pool ────────────────────────────────────
+// The first SQL Server connection after app start has a 2-3 second cold-start
+// cost (TCP handshake, TLS, EF model validation). By opening a throwaway
+// connection here — while the app is starting up in the background — the pool
+// is ready before the first user clicks Login, so their request is instant.
+_ = Task.Run(async () =>
+{
+    try
+    {
+        await using var ctx = app.Services
+            .GetRequiredService<IDbContextFactory<AppDbContext>>()
+            .CreateDbContext();
+        await ctx.Database.ExecuteSqlRawAsync("SELECT 1");
+    }
+    catch
+    {
+        // Swallow — if the DB is unavailable at startup the app still loads;
+        // the error will surface naturally when the user tries to log in.
+    }
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
