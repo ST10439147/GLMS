@@ -5,7 +5,7 @@
 namespace ST10439147_PRO7311_POE.Migrations
 {
     /// <inheritdoc />
-    public partial class serviceEdit : Migration
+    public partial class recreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

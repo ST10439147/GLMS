@@ -77,7 +77,7 @@ namespace ST10439147_PRO7311_POE.Services
             // either Expired or Completed (Draft / Active / OnHold block deletion).
             var blocking = client.Contracts
                 .Where(c => c.Status != ContractStatus.Expired &&
-                            c.Status != ContractStatus.Completed)
+                            c.Status != ContractStatus.OnHold)
                 .ToList();
 
             if (blocking.Any())

@@ -75,11 +75,10 @@ else
                     <div class="form-group">
                         <label>Service Level <span class="required">*</span></label>
                         <select class="form-select" @bind="_serviceLevel">
-                            <option value="">— Select level —</option>
-                            <option value="Standard">Standard</option>
-                            <option value="Premium">Premium</option>
-                            <option value="Express">Express</option>
-                            <option value="Economy">Economy</option>
+                            @foreach (var lvl in Enum.GetValues<ServiceLvl>())
+                            {
+                                <option value="@lvl">@lvl</option>
+                            }
                         </select>
                         @if (_submitted && string.IsNullOrWhiteSpace(_serviceLevel))
                         {
@@ -181,7 +180,7 @@ else
 
     private string _title = string.Empty;
     private int _clientId;
-    private string _serviceLevel = string.Empty;
+    private string _serviceLevel = nameof(ServiceLvl.Standard);
     private DateTime _startDate = DateTime.Today;
     private DateTime _endDate = DateTime.Today.AddYears(1);
     private ContractStatus _status = ContractStatus.Draft;
@@ -238,7 +237,7 @@ else
                 var c = dto.Contract;
                 _title = c.Title;
                 _clientId = c.ClientId;
-                _serviceLevel = c.ServiceLevel;
+                _serviceLevel = c.ServiceLevel.ToString();
                 _startDate = c.StartDate;
                 _endDate = c.EndDate;
                 _status = c.Status;
@@ -266,8 +265,8 @@ else
         _formError = string.Empty;
 
         if (string.IsNullOrWhiteSpace(_title) || _clientId == 0 ||
-            string.IsNullOrWhiteSpace(_serviceLevel) || _startDate == default ||
-            _endDate == default || _endDate <= _startDate || _fileError != null)
+            _startDate == default || _endDate == default ||
+            _endDate <= _startDate || _fileError != null)
             return;
 
         _saving = true;
@@ -277,7 +276,8 @@ else
 
             if (_isEdit)
             {
-                var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = _serviceLevel, StartDate = _startDate, EndDate = _endDate };
+                var svcLevel = Enum.Parse<ServiceLvl>(_serviceLevel);
+                var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = svcLevel, StartDate = _startDate, EndDate = _endDate };
                 var resp = await Http.PutAsJsonAsync($"api/v1/contract/Update/{Id}", payload);
                 if (!resp.IsSuccessStatusCode) { _formError = "Failed to update contract."; return; }
 
@@ -290,7 +290,8 @@ else
             }
             else
             {
-                var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = _serviceLevel, StartDate = _startDate, EndDate = _endDate, Status = ContractStatus.Draft };
+                var svcLevel = Enum.Parse<ServiceLvl>(_serviceLevel);
+                var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = svcLevel, StartDate = _startDate, EndDate = _endDate, Status = ContractStatus.Draft };
                 var resp = await Http.PostAsJsonAsync("api/v1/contract/Create", payload);
                 if (!resp.IsSuccessStatusCode) { _formError = "Failed to create contract."; return; }
                 var created = await resp.Content.ReadFromJsonAsync<ContractResponseDto>();

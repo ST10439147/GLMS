@@ -12,8 +12,8 @@ using ST10439147_PRO7311_POE.Data;
 namespace ST10439147_PRO7311_POE.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260419135920_init")]
-    partial class init
+    [Migration("20260420165000_recreate")]
+    partial class recreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,10 +43,9 @@ namespace ST10439147_PRO7311_POE.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("Region")
-                        .IsRequired()
+                    b.Property<int>("Region")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -67,10 +66,9 @@ namespace ST10439147_PRO7311_POE.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ServiceLevel")
-                        .IsRequired()
+                    b.Property<int>("ServiceLevel")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("int");
 
                     b.Property<string>("SignedAgreementFileName")
                         .HasMaxLength(300)
@@ -123,11 +121,21 @@ namespace ST10439147_PRO7311_POE.Migrations
                     b.Property<decimal>("ExchangeRateUsed")
                         .HasColumnType("decimal(18,6)");
 
+                    b.Property<string>("FromCurrency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<string>("ToCurrency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.HasKey("Id");
 

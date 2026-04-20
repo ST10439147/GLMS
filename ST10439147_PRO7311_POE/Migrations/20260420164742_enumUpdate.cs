@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ST10439147_PRO7311_POE.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class enumUpdate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,7 +19,7 @@ namespace ST10439147_PRO7311_POE.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     ContactDetails = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Region = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                    Region = table.Column<int>(type: "int", maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -52,7 +52,7 @@ namespace ST10439147_PRO7311_POE.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    ServiceLevel = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    ServiceLevel = table.Column<int>(type: "int", maxLength: 100, nullable: false),
                     ClientId = table.Column<int>(type: "int", nullable: false),
                     StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -81,6 +81,8 @@ namespace ST10439147_PRO7311_POE.Migrations
                     CostUSD = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CostZAR = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     ExchangeRateUsed = table.Column<decimal>(type: "decimal(18,6)", nullable: false),
+                    FromCurrency = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    ToCurrency = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     RequestDate = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },

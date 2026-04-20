@@ -5,7 +5,9 @@ using static ST10439147_PRO7311_POE.Models.Clients;
 namespace ST10439147_PRO7311_POE.Models
 {
     // Status machine: Draft → Active → Expired | OnHold
-    public enum ContractStatus { Draft, Active, Expired, OnHold, Completed }
+    public enum ContractStatus { Draft, Active, Expired, OnHold }
+
+    public enum ServiceLvl { Standard, Premium, Express, Economy }
 
     [Table("Contract")]
     public class Contract
@@ -19,9 +21,9 @@ namespace ST10439147_PRO7311_POE.Models
         [Required]
         public ContractStatus Status { get; set; } = ContractStatus.Draft;
 
-        // From rubric: ServiceLevel field on Contract
-        [Required, MaxLength(100)]
-        public string ServiceLevel { get; set; } = string.Empty;
+        // ServiceLevel field on Contract
+        [Required]
+        public ServiceLvl ServiceLevel { get; set; }
 
         [Required]
         public int ClientId { get; set; }

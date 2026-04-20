@@ -40,10 +40,9 @@ namespace ST10439147_PRO7311_POE.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("Region")
-                        .IsRequired()
+                    b.Property<int>("Region")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -64,10 +63,9 @@ namespace ST10439147_PRO7311_POE.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ServiceLevel")
-                        .IsRequired()
+                    b.Property<int>("ServiceLevel")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("int");
 
                     b.Property<string>("SignedAgreementFileName")
                         .HasMaxLength(300)
