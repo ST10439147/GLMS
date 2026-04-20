@@ -1,7 +1,7 @@
 ﻿@page "/"
 @using ST10439147_PRO7311_POE.Models
 @inject HttpClient Http
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject ProtectedSessionStorage SessionStorage
 @inject UserState UserState
 @inject NavigationManager Nav
@@ -10,7 +10,7 @@
 
 @if (!_sessionChecked)
 {
-    <div class="alert alert-info">Loading...</div>
+    @* Silent blank while we check — no flash of home content *@
 }
 else if (!UserState.IsLoggedIn)
 {
@@ -114,35 +114,42 @@ else
     private bool _loading = true;
     private bool _sessionChecked;
 
+    protected override void OnInitialized()
+    {
+        // Subscribe so any login/logout elsewhere refreshes this page instantly
+        UserState.OnChange += StateHasChanged;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_sessionChecked)
+        if (!firstRender || _sessionChecked) return;
+        _sessionChecked = true;
+
+        // ProtectedSessionStorage requires JS interop, so it can only run
+        // after the first render (OnAfterRenderAsync). We check the in-memory
+        // UserState first (already populated if the user navigated here from
+        // another page), and only hit session storage when needed.
+        if (!UserState.IsLoggedIn)
         {
-            _sessionChecked = true;
-
-            if (!UserState.IsLoggedIn)
+            try
             {
-                try
+                var result = await SessionStorage.GetAsync<User>("currentUser");
+                if (result.Success && result.Value != null)
                 {
-                    var result = await SessionStorage.GetAsync<User>("currentUser");
-                    if (result.Success && result.Value != null)
-                    {
-                        UserState.CurrentUser = result.Value;
-                        await LoadData();
-                        StateHasChanged();
-                        return;
-                    }
+                    UserState.CurrentUser = result.Value;   // triggers OnChange → StateHasChanged
+                    await LoadData();
+                    StateHasChanged();
+                    return;
                 }
-                catch { }
-
-                // No session found — redirect to login
-                Nav.NavigateTo("/login");
-                return;
             }
+            catch { }
 
-            await LoadData();
-            StateHasChanged();
+            Nav.NavigateTo("/login");
+            return;
         }
+
+        await LoadData();
+        StateHasChanged();
     }
 
     private async Task LoadData()
@@ -153,5 +160,10 @@ else
         }
         catch { }
         finally { _loading = false; }
+    }
+
+    public void Dispose()
+    {
+        UserState.OnChange -= StateHasChanged;
     }
 }

@@ -81,7 +81,7 @@
                 if (result.Success && result.Value != null)
                 {
                     UserState.CurrentUser = result.Value;
-                    Nav.NavigateTo("/");   // no forceLoad
+                    Nav.NavigateTo("/");
                 }
             }
             catch { }
@@ -101,7 +101,12 @@
         if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_password))
             return;
 
+        // Set the loading flag and force a re-render immediately so the spinner
+        // appears before the awaited login call suspends execution. Without this
+        // explicit StateHasChanged(), Blazor batches the update and only repaints
+        // AFTER DoLogin() returns — causing the 2-3 second spinner delay.
         _loading = true;
+        StateHasChanged();
 
         try
         {
@@ -112,7 +117,7 @@
             {
                 UserState.CurrentUser = user;
                 await SessionStorage.SetAsync("currentUser", user);
-                Nav.NavigateTo("/");   // no forceLoad
+                Nav.NavigateTo("/");
             }
             else
             {

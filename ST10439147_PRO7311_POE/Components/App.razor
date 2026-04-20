@@ -15,7 +15,10 @@
 </head>
 
 <body>
-    <Routes />
+    @* prerender:false stops Blazor sending static HTML before the SignalR circuit
+       is live. Without this every protected page flashes its content briefly
+       before OnAfterRenderAsync can check the session and redirect to login. *@
+    <Routes @rendermode="@(new InteractiveServerRenderMode(prerender: false))" />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>

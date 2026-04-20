@@ -3,23 +3,34 @@
 @using ST10439147_PRO7311_POE.Models
 @inject ProtectedSessionStorage SessionStorage
 @inject UserState UserState
+@inject NavigationManager Nav
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+@* Don't render the shell at all until we know the auth state.
+   This prevents the sidebar + blank content area flashing before
+   the session check redirects to /login. *@
+@if (_authReady)
+{
+    <div class="page">
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+
+        <main>
+            <article class="content px-4">
+                @Body
+            </article>
+        </main>
     </div>
-
-    <main>
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+}
 
 @code {
+    private bool _authReady;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !UserState.IsLoggedIn)
+        if (!firstRender) return;
+
+        if (!UserState.IsLoggedIn)
         {
             try
             {
@@ -27,10 +38,20 @@
                 if (result.Success && result.Value != null)
                 {
                     UserState.CurrentUser = result.Value;
+                    _authReady = true;
                     StateHasChanged();
+                    return;
                 }
             }
             catch { }
+
+            // No valid session — redirect to login, keep layout hidden
+            Nav.NavigateTo("/login");
+            return;
         }
+
+        // Already logged in (navigated from another page)
+        _authReady = true;
+        StateHasChanged();
     }
 }
