@@ -134,6 +134,8 @@ namespace ST10439147_PRO7311_POE.Controllers
         // Only users with Manager or Admin roles can upload signed agreements. The endpoint accepts a contract ID as a route parameter and an IFormFile representing the signed agreement in the request body. It checks if the user has the necessary role, and if so, it saves the file using the file service and updates the contract with the path to the saved agreement. The response is a ContractResponseDto indicating the success or failure of the upload operation.
         // This endpoint allows authorized users to associate a signed agreement document with a specific contract, facilitating the management of contract documentation. The file service handles the logic for saving the uploaded file to the server, and the contract service updates the contract record with the file path and name. The endpoint also provides feedback on whether the upload was successful or if there were any issues, such as invalid file formats or errors during file saving.
         [HttpPost("UploadAgreement/{contractId}")]
+        [RequestSizeLimit(20 * 1024 * 1024)]          // ← hard cap at 20 MB
+        [RequestFormLimits(MultipartBodyLengthLimit = 20 * 1024 * 1024)]
         public async Task<ActionResult<ContractResponseDto>> UploadAgreement(
             int contractId, IFormFile file)
         {

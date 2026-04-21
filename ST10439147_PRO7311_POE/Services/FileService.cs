@@ -5,6 +5,8 @@ namespace ST10439147_PRO7311_POE.Services
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<FileService> _logger;
 
+        private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
+
         // PDF magic bytes: every valid PDF file starts with "%PDF"
         // This is a simple check to prevent non-PDF files from being uploaded with a .pdf extension.
         private static readonly byte[] PdfMagicBytes = { 0x25, 0x50, 0x44, 0x46 }; // %PDF
@@ -23,6 +25,10 @@ namespace ST10439147_PRO7311_POE.Services
         {
             if (file == null || file.Length == 0)
                 throw new InvalidOperationException("No file was uploaded.");
+
+            if (file.Length > MaxFileSizeBytes)
+                throw new InvalidOperationException(
+                    $"File size {file.Length / (1024 * 1024):F1} MB exceeds the 20 MB limit.");
 
             // Checking the extension is a quick initial filter, but we must also check the file header to ensure it's a valid PDF.
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
