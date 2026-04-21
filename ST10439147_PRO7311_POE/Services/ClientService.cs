@@ -71,9 +71,13 @@ namespace ST10439147_PRO7311_POE.Services
         }
 
         // Deleting a client is complex due to the relationships with contracts and service requests.
-        // A client can only be deleted if ALL their contracts are Expired. This prevents orphaned active contracts.
-        // If the client is eligible for deletion, we must explicitly delete all related service requests and contracts in the correct order to satisfy FK constraints.
-        // The service layer is responsible for enforcing these rules and performing the cascading delete operation.
+        // Rules:
+        //   1. A client can only be deleted when ALL contracts are in a terminal status:
+        //      Expired or Draft. Active and OnHold contracts block deletion.
+        //   2. For every contract that has service requests, ALL service requests must be
+        //      Rejected or Completed before that contract (and therefore the client) can be removed.
+        // If the client is eligible for deletion, we explicitly delete all related service
+        // requests and contracts in leaf-first order to satisfy FK constraints.
         public async Task<ClientResponseDto> DeleteClient(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -88,19 +92,45 @@ namespace ST10439147_PRO7311_POE.Services
             if (client == null)
                 return new ClientResponseDto { Message = $"Client {id} not found.", Status = false };
 
-            // A client may only be deleted when ALL their contracts are Expired.
-            // Draft, Active, and OnHold contracts all block deletion.
-            var blocking = client.Contracts
-                .Where(c => c.Status != ContractStatus.Expired)
+            // Rule 1: Active and OnHold contracts block client deletion entirely.
+            // A contract must be Expired, Draft, or Rejected before the client can be removed.
+            var activeContracts = client.Contracts
+                .Where(c => c.Status == ContractStatus.Active || c.Status == ContractStatus.OnHold)
                 .ToList();
 
-            if (blocking.Any())
+            if (activeContracts.Any())
             {
-                var details = string.Join(", ", blocking.Select(c => $"#{c.Id} '{c.Title}' ({c.Status})"));
+                var details = string.Join(", ", activeContracts.Select(c => $"#{c.Id} '{c.Title}' ({c.Status})"));
                 return new ClientResponseDto
                 {
                     Message = $"Cannot delete client '{client.Name}'. " +
-                              $"The following contract(s) must be Expired first: {details}.",
+                              $"The following contract(s) must be Expired, Draft, or Rejected first: {details}.",
+                    Status = false
+                };
+            }
+
+            // Rule 2: For each contract, all service requests must be Rejected or Completed.
+            // A contract with Pending or Approved service requests cannot be removed.
+            var contractsWithPendingRequests = client.Contracts
+                .Where(c => c.ServiceRequests.Any(sr =>
+                    sr.Status != ServiceRequestStatus.Rejected &&
+                    sr.Status != ServiceRequestStatus.Completed))
+                .ToList();
+
+            if (contractsWithPendingRequests.Any())
+            {
+                var details = string.Join(", ", contractsWithPendingRequests.Select(c =>
+                {
+                    var blocking = c.ServiceRequests
+                        .Where(sr => sr.Status != ServiceRequestStatus.Rejected && sr.Status != ServiceRequestStatus.Completed)
+                        .Select(sr => $"SR#{sr.Id} ({sr.Status})");
+                    return $"Contract #{c.Id} '{c.Title}' has open service request(s): {string.Join(", ", blocking)}";
+                }));
+
+                return new ClientResponseDto
+                {
+                    Message = $"Cannot delete client '{client.Name}'. " +
+                              $"All service requests must be Rejected or Completed first. {details}.",
                     Status = false
                 };
             }

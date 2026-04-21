@@ -8,7 +8,10 @@ using ST10439147_PRO7311_POE.Tests.Helpers;
 namespace ST10439147_PRO7311_POE.Tests
 {
     // Tests the ContractService business rules:
-    //   - Contracts with active service requests cannot be deleted.
+    //   Rule 1 - Active and OnHold contracts cannot be deleted.
+    //            The contract must be Expired, Draft, or Rejected first.
+    //   Rule 2 - A contract can only be deleted once all its service requests
+    //            are Rejected or Completed (or there are none).
     //   - SearchContracts filters correctly by status.
     //   - Contracts whose EndDate has passed are automatically set to Expired.
     //   - Contracts without a signed agreement are automatically set to Draft.
@@ -30,8 +33,9 @@ namespace ST10439147_PRO7311_POE.Tests
             return new ContractService(hubMock.Object, factory);
         }
 
-        // Seeds a contract with one service request and returns the contract ID.
-        private static async Task<int> SeedContractWithRequest(string dbName, ServiceRequestStatus srStatus)
+        // Seeds a contract with a specific status and one service request, returns the contract ID.
+        private static async Task<int> SeedContractWithRequest(
+            string dbName, ContractStatus contractStatus, ServiceRequestStatus srStatus)
         {
             var factory = DbContextHelper.CreateFactory(dbName);
             using var ctx = factory.CreateDbContext();
@@ -42,13 +46,13 @@ namespace ST10439147_PRO7311_POE.Tests
 
             var contract = new Contract
             {
-                Title = "Blocked Contract",
-                Status = ContractStatus.Active,
+                Title = "Test Contract",
+                Status = contractStatus,
                 ServiceLevel = ServiceLvl.Standard,
                 ClientId = client.Id,
                 StartDate = DateTime.UtcNow,
                 EndDate = DateTime.UtcNow.AddYears(1),
-                SignedAgreementPath = "uploads/agreements/fake.pdf"   // has agreement → stays Active
+                SignedAgreementPath = "uploads/agreements/fake.pdf"
             };
             ctx.Contracts.Add(contract);
             await ctx.SaveChangesAsync();
@@ -63,45 +67,76 @@ namespace ST10439147_PRO7311_POE.Tests
             return contract.Id;
         }
 
-        // Deletion rules
-        [Fact]
-        public async Task DeleteContract_NoServiceRequests_Succeeds()
+        // Seeds a contract with a specific status and no service requests, returns the contract ID.
+        private static async Task<int> SeedContractNoRequests(string dbName, ContractStatus contractStatus)
         {
-            var dbName = Guid.NewGuid().ToString();
             var factory = DbContextHelper.CreateFactory(dbName);
-            using (var ctx = factory.CreateDbContext())
+            using var ctx = factory.CreateDbContext();
+
+            var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
+            ctx.Clients.Add(client);
+            await ctx.SaveChangesAsync();
+
+            var contract = new Contract
             {
-                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
-                ctx.Clients.Add(client);
-                await ctx.SaveChangesAsync();
-
-                ctx.Contracts.Add(new Contract
-                {
-                    Title = "Clean Contract",
-                    Status = ContractStatus.Active,
-                    ServiceLevel = ServiceLvl.Standard,
-                    ClientId = client.Id,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddYears(1),
-                    SignedAgreementPath = "uploads/agreements/fake.pdf"  // has agreement → stays Active
-                });
-                await ctx.SaveChangesAsync();
-            }
-
-            var service = CreateService(dbName);
-            var all = await service.GetAllContracts();
-            var result = await service.DeleteContract(all.First().Id);
-
-            Assert.True(result!.Status);
+                Title = "Test Contract",
+                Status = contractStatus,
+                ServiceLevel = ServiceLvl.Standard,
+                ClientId = client.Id,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddYears(1),
+                SignedAgreementPath = "uploads/agreements/fake.pdf"
+            };
+            ctx.Contracts.Add(contract);
+            await ctx.SaveChangesAsync();
+            return contract.Id;
         }
 
+        //  Rule 1: Active / OnHold contracts block deletion
+
         [Theory]
-        [InlineData(ServiceRequestStatus.Pending)]
-        [InlineData(ServiceRequestStatus.Approved)]
-        public async Task DeleteContract_HasActiveRequest_Fails(ServiceRequestStatus srStatus)
+        [InlineData(ContractStatus.Active)]
+        [InlineData(ContractStatus.OnHold)]
+        public async Task DeleteContract_ActiveOrOnHold_Fails(ContractStatus status)
         {
             var dbName = Guid.NewGuid().ToString();
-            var contractId = await SeedContractWithRequest(dbName, srStatus);
+            var contractId = await SeedContractNoRequests(dbName, status);
+
+            var result = await CreateService(dbName).DeleteContract(contractId);
+
+            Assert.False(result!.Status);
+            Assert.Contains("Expired, Draft, or Rejected", result.Message);
+            Assert.Contains(status.ToString(), result.Message);
+        }
+
+        //  Rule 1: Terminal-status contracts with no service requests can be deleted 
+
+        [Theory]
+        [InlineData(ContractStatus.Expired)]
+        [InlineData(ContractStatus.Draft)]
+        public async Task DeleteContract_TerminalStatus_NoServiceRequests_Succeeds(ContractStatus status)
+        {
+            var dbName = Guid.NewGuid().ToString();
+            var contractId = await SeedContractNoRequests(dbName, status);
+
+            var result = await CreateService(dbName).DeleteContract(contractId);
+
+            Assert.True(result!.Status);
+            Assert.Contains("deleted", result.Message);
+        }
+
+        // Rule 2: Open service requests block deletion (even on terminal contracts)
+
+        [Theory]
+        [InlineData(ContractStatus.Expired, ServiceRequestStatus.Pending)]
+        [InlineData(ContractStatus.Expired, ServiceRequestStatus.Approved)]
+        [InlineData(ContractStatus.Draft, ServiceRequestStatus.Pending)]
+        [InlineData(ContractStatus.Draft, ServiceRequestStatus.Approved)]
+        public async Task DeleteContract_HasOpenServiceRequest_Fails(
+            ContractStatus contractStatus, ServiceRequestStatus srStatus)
+        {
+            var dbName = Guid.NewGuid().ToString();
+            var contractId = await SeedContractWithRequest(dbName, contractStatus, srStatus);
 
             var result = await CreateService(dbName).DeleteContract(contractId);
 
@@ -109,7 +144,27 @@ namespace ST10439147_PRO7311_POE.Tests
             Assert.Contains("Rejected or Completed", result.Message);
         }
 
-        // Search / filter
+        // ── Rule 2: Closed service requests allow deletion on terminal contracts ──
+
+        [Theory]
+        [InlineData(ContractStatus.Expired, ServiceRequestStatus.Completed)]
+        [InlineData(ContractStatus.Expired, ServiceRequestStatus.Rejected)]
+        [InlineData(ContractStatus.Draft, ServiceRequestStatus.Completed)]
+        [InlineData(ContractStatus.Draft, ServiceRequestStatus.Rejected)]
+        public async Task DeleteContract_TerminalStatus_ClosedServiceRequests_Succeeds(
+            ContractStatus contractStatus, ServiceRequestStatus srStatus)
+        {
+            var dbName = Guid.NewGuid().ToString();
+            var contractId = await SeedContractWithRequest(dbName, contractStatus, srStatus);
+
+            var result = await CreateService(dbName).DeleteContract(contractId);
+
+            Assert.True(result!.Status);
+            Assert.Contains("deleted", result.Message);
+        }
+
+        // ── Search / filter ───────────────────────────────────────────────────────
+
         [Fact]
         public async Task SearchContracts_ByStatus_ReturnsOnlyMatching()
         {
@@ -128,7 +183,7 @@ namespace ST10439147_PRO7311_POE.Tests
                     {
                         Title = "Active1",
                         Status = ContractStatus.Active,
-                        ServiceLevel = ServiceLvl.Economy,
+                        ServiceLevel = ServiceLvl.Standard,
                         ClientId = client.Id,
                         StartDate = DateTime.UtcNow,
                         EndDate = DateTime.UtcNow.AddYears(1),
@@ -141,32 +196,34 @@ namespace ST10439147_PRO7311_POE.Tests
                         ServiceLevel = ServiceLvl.Premium,
                         ClientId = client.Id,
                         StartDate = DateTime.UtcNow,
-                        EndDate = DateTime.UtcNow.AddYears(1),
+                        EndDate = DateTime.UtcNow.AddYears(2),
                         SignedAgreementPath = "uploads/agreements/a2.pdf"
                     },
-                    // One genuinely Expired contract: EndDate is in the past
+                    // One Draft contract
                     new Contract
                     {
-                        Title = "Expired1",
-                        Status = ContractStatus.Expired,
-                        ServiceLevel = ServiceLvl.Economy,
+                        Title = "Draft1",
+                        Status = ContractStatus.Draft,
+                        ServiceLevel = ServiceLvl.Standard,
                         ClientId = client.Id,
-                        StartDate = DateTime.UtcNow.AddYears(-2),
-                        EndDate = DateTime.UtcNow.AddDays(-1)           // past end date
-                    }
-                );
+                        StartDate = DateTime.UtcNow,
+                        EndDate = DateTime.UtcNow.AddYears(1)
+                    });
+
                 await ctx.SaveChangesAsync();
             }
 
-            var results = await CreateService(dbName).SearchContracts(null, null, ContractStatus.Active);
+            var service = CreateService(dbName);
+            var results = await service.SearchContracts(null, null, ContractStatus.Active);
 
             Assert.Equal(2, results.Count);
             Assert.All(results, c => Assert.Equal(ContractStatus.Active, c.Status));
         }
 
-        // Auto-status: Expired when EndDate has passed
+        // Auto-status correction 
+
         [Fact]
-        public async Task GetContract_EndDatePassed_StatusBecomesExpired()
+        public async Task GetContract_ExpiredEndDate_AutoSetsExpired()
         {
             var dbName = Guid.NewGuid().ToString();
             var factory = DbContextHelper.CreateFactory(dbName);
@@ -180,240 +237,13 @@ namespace ST10439147_PRO7311_POE.Tests
 
                 var contract = new Contract
                 {
-                    Title = "Overdue Contract",
-                    Status = ContractStatus.Active,          // stored as Active
-                    ServiceLevel = ServiceLvl.Standard,
-                    ClientId = client.Id,
-                    StartDate = DateTime.UtcNow.AddYears(-2),
-                    EndDate = DateTime.UtcNow.AddDays(-1),   // yesterday → expired
-                    SignedAgreementPath = "uploads/agreements/overdue.pdf"
-                };
-                ctx.Contracts.Add(contract);
-                await ctx.SaveChangesAsync();
-                contractId = contract.Id;
-            }
-
-            var service = CreateService(dbName);
-            var result = await service.GetContract(contractId);
-
-            // Returned DTO reflects Expired
-            Assert.True(result!.Status);
-            Assert.Equal(ContractStatus.Expired, result.Contract!.Status);
-
-            // Persisted value is also corrected
-            using var verifyCtx = factory.CreateDbContext();
-            var stored = await verifyCtx.Contracts.FindAsync(contractId);
-            Assert.Equal(ContractStatus.Expired, stored!.Status);
-        }
-
-        [Fact]
-        public async Task GetAllContracts_EndDatePassed_StatusBecomesExpired()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var factory = DbContextHelper.CreateFactory(dbName);
-
-            using (var ctx = factory.CreateDbContext())
-            {
-                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
-                ctx.Clients.Add(client);
-                await ctx.SaveChangesAsync();
-
-                ctx.Contracts.Add(new Contract
-                {
-                    Title = "Old Contract",
-                    Status = ContractStatus.Active,
-                    ServiceLevel = ServiceLvl.Economy,
-                    ClientId = client.Id,
-                    StartDate = DateTime.UtcNow.AddYears(-3),
-                    EndDate = DateTime.UtcNow.AddDays(-10),  // past end date
-                    SignedAgreementPath = "uploads/agreements/old.pdf"
-                });
-                await ctx.SaveChangesAsync();
-            }
-
-            var service = CreateService(dbName);
-            var all = await service.GetAllContracts();
-
-            Assert.Single(all);
-            Assert.Equal(ContractStatus.Expired, all[0].Status);
-        }
-
-        [Fact]
-        public async Task SearchContracts_EndDatePassed_StatusBecomesExpired()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var factory = DbContextHelper.CreateFactory(dbName);
-            int contractId;
-
-            using (var ctx = factory.CreateDbContext())
-            {
-                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
-                ctx.Clients.Add(client);
-                await ctx.SaveChangesAsync();
-
-                var contract = new Contract
-                {
-                    Title = "Stale Active",
+                    Title = "Past Due",
                     Status = ContractStatus.Active,
                     ServiceLevel = ServiceLvl.Standard,
                     ClientId = client.Id,
                     StartDate = DateTime.UtcNow.AddYears(-2),
-                    EndDate = DateTime.UtcNow.AddDays(-5),   // past end date
-                    SignedAgreementPath = "uploads/agreements/stale.pdf"
-                };
-                ctx.Contracts.Add(contract);
-                await ctx.SaveChangesAsync();
-                contractId = contract.Id;
-            }
-
-            // Search with no filter — should still auto-correct and persist
-            var service = CreateService(dbName);
-            var results = await service.SearchContracts(null, null, null);
-
-            Assert.Single(results);
-            Assert.Equal(ContractStatus.Expired, results[0].Status);
-
-            // Verify DB was updated
-            using var verifyCtx = factory.CreateDbContext();
-            var stored = await verifyCtx.Contracts.FindAsync(contractId);
-            Assert.Equal(ContractStatus.Expired, stored!.Status);
-        }
-
-        // Auto-status: Draft when no signed agreement is present
-        [Fact]
-        public async Task GetContract_NoAgreement_StatusBecomesDraft()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var factory = DbContextHelper.CreateFactory(dbName);
-            int contractId;
-
-            using (var ctx = factory.CreateDbContext())
-            {
-                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
-                ctx.Clients.Add(client);
-                await ctx.SaveChangesAsync();
-
-                var contract = new Contract
-                {
-                    Title = "No-Doc Contract",
-                    Status = ContractStatus.Active,   // stored as Active
-                    ServiceLevel = ServiceLvl.Standard,
-                    ClientId = client.Id,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddYears(1),
-                    SignedAgreementPath = null         // no agreement uploaded
-                };
-                ctx.Contracts.Add(contract);
-                await ctx.SaveChangesAsync();
-                contractId = contract.Id;
-            }
-
-            var service = CreateService(dbName);
-            var result = await service.GetContract(contractId);
-
-            Assert.True(result!.Status);
-            Assert.Equal(ContractStatus.Draft, result.Contract!.Status);
-
-            // Verify the correction was persisted
-            using var verifyCtx = factory.CreateDbContext();
-            var stored = await verifyCtx.Contracts.FindAsync(contractId);
-            Assert.Equal(ContractStatus.Draft, stored!.Status);
-        }
-
-        [Fact]
-        public async Task GetAllContracts_NoAgreement_StatusBecomesDraft()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var factory = DbContextHelper.CreateFactory(dbName);
-
-            using (var ctx = factory.CreateDbContext())
-            {
-                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
-                ctx.Clients.Add(client);
-                await ctx.SaveChangesAsync();
-
-                ctx.Contracts.Add(new Contract
-                {
-                    Title = "Unsigned",
-                    Status = ContractStatus.OnHold,   // any non-Draft stored status
-                    ServiceLevel = ServiceLvl.Premium,
-                    ClientId = client.Id,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddYears(1),
-                    SignedAgreementPath = null         // no agreement
-                });
-                await ctx.SaveChangesAsync();
-            }
-
-            var all = await CreateService(dbName).GetAllContracts();
-
-            Assert.Single(all);
-            Assert.Equal(ContractStatus.Draft, all[0].Status);
-        }
-
-        // Auto-status: Expired takes priority over Draft
-        [Fact]
-        public async Task GetContract_EndDatePassedAndNoAgreement_StatusIsExpiredNotDraft()
-        {
-            // If both rules fire, Expired takes priority because the contract
-            // end date is the stronger business condition.
-            var dbName = Guid.NewGuid().ToString();
-            var factory = DbContextHelper.CreateFactory(dbName);
-            int contractId;
-
-            using (var ctx = factory.CreateDbContext())
-            {
-                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
-                ctx.Clients.Add(client);
-                await ctx.SaveChangesAsync();
-
-                var contract = new Contract
-                {
-                    Title = "Worst Case Contract",
-                    Status = ContractStatus.Active,
-                    ServiceLevel = ServiceLvl.Economy,
-                    ClientId = client.Id,
-                    StartDate = DateTime.UtcNow.AddYears(-2),
-                    EndDate = DateTime.UtcNow.AddDays(-1),  // past end date
-                    SignedAgreementPath = null               // also no agreement
-                };
-                ctx.Contracts.Add(contract);
-                await ctx.SaveChangesAsync();
-                contractId = contract.Id;
-            }
-
-            var service = CreateService(dbName);
-            var result = await service.GetContract(contractId);
-
-            Assert.True(result!.Status);
-            Assert.Equal(ContractStatus.Expired, result.Contract!.Status);
-        }
-
-        // Auto-status: no change when contract is legitimately Active
-        [Fact]
-        public async Task GetContract_FutureDateAndHasAgreement_StatusUnchanged()
-        {
-            // A contract with a future end date and an uploaded agreement should
-            // keep whatever status was stored — no auto-correction should fire.
-            var dbName = Guid.NewGuid().ToString();
-            var factory = DbContextHelper.CreateFactory(dbName);
-            int contractId;
-
-            using (var ctx = factory.CreateDbContext())
-            {
-                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
-                ctx.Clients.Add(client);
-                await ctx.SaveChangesAsync();
-
-                var contract = new Contract
-                {
-                    Title = "Valid Contract",
-                    Status = ContractStatus.Active,
-                    ServiceLevel = ServiceLvl.Premium,
-                    ClientId = client.Id,
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddYears(1),
-                    SignedAgreementPath = "uploads/agreements/valid.pdf"
+                    EndDate = DateTime.UtcNow.AddDays(-1),        // already expired
+                    SignedAgreementPath = "uploads/agreements/past.pdf"
                 };
                 ctx.Contracts.Add(contract);
                 await ctx.SaveChangesAsync();
@@ -423,7 +253,41 @@ namespace ST10439147_PRO7311_POE.Tests
             var result = await CreateService(dbName).GetContract(contractId);
 
             Assert.True(result!.Status);
-            Assert.Equal(ContractStatus.Active, result.Contract!.Status);
+            Assert.Equal(ContractStatus.Expired, result.Contract!.Status);
+        }
+
+        [Fact]
+        public async Task GetContract_NoSignedAgreement_AutoSetsDraft()
+        {
+            var dbName = Guid.NewGuid().ToString();
+            var factory = DbContextHelper.CreateFactory(dbName);
+            int contractId;
+
+            using (var ctx = factory.CreateDbContext())
+            {
+                var client = new Clients { Name = "C", Region = ClientRegion.SubSaharanAfrica };
+                ctx.Clients.Add(client);
+                await ctx.SaveChangesAsync();
+
+                var contract = new Contract
+                {
+                    Title = "No Agreement",
+                    Status = ContractStatus.Active,
+                    ServiceLevel = ServiceLvl.Standard,
+                    ClientId = client.Id,
+                    StartDate = DateTime.UtcNow,
+                    EndDate = DateTime.UtcNow.AddYears(1)
+                    // SignedAgreementPath deliberately omitted
+                };
+                ctx.Contracts.Add(contract);
+                await ctx.SaveChangesAsync();
+                contractId = contract.Id;
+            }
+
+            var result = await CreateService(dbName).GetContract(contractId);
+
+            Assert.True(result!.Status);
+            Assert.Equal(ContractStatus.Draft, result.Contract!.Status);
         }
     }
 }

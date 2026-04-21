@@ -120,10 +120,12 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = contract, Message = msg, Status = true };
         }
 
-        // Deletes a specific contract identified by its ID, but only if all associated service requests are either Rejected or Completed (or if there are no service requests).
-        // The method first retrieves the contract along with its related service requests from the database.
-        // It checks if the contract exists and then validates that all associated service requests are in a state that allows for deletion.
-        // If there are any service requests that are not Rejected or Completed, the method returns a failure response with a message indicating which service requests are blocking the deletion.
+        // Deletes a specific contract identified by its ID, subject to two rules:
+        //   Rule 1 - The contract's status must be Expired, Draft, or Rejected.
+        //            Active and OnHold contracts cannot be deleted.
+        //   Rule 2 - All associated service requests must be Rejected or Completed
+        //            (or there are none) before the contract can be removed.
+        // The method returns a descriptive failure message when either rule is violated.
         public async Task<ContractResponseDto?> DeleteContract(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -136,8 +138,21 @@ namespace ST10439147_PRO7311_POE.Services
             if (contract == null)
                 return new ContractResponseDto { Message = $"Contract {id} not found.", Status = false };
 
-            // A contract may only be deleted when ALL its service requests are
-            // either Rejected or Completed (or there are none).
+            // Rule 1: Only terminal-status contracts may be deleted.
+            // Active and OnHold contracts represent ongoing obligations and must be
+            // transitioned to Expired, Draft, or Rejected before deletion is allowed.
+            if (contract.Status == ContractStatus.Active || contract.Status == ContractStatus.OnHold)
+            {
+                return new ContractResponseDto
+                {
+                    Message = $"Cannot delete contract '{contract.Title}'. " +
+                              $"Its current status is '{contract.Status}'. " +
+                              "A contract must be Expired, Draft, or Rejected before it can be deleted.",
+                    Status = false
+                };
+            }
+
+            // Rule 2: All service requests must be closed before the contract can be removed.
             var blocking = contract.ServiceRequests
                 .Where(sr => sr.Status != ServiceRequestStatus.Rejected &&
                              sr.Status != ServiceRequestStatus.Completed)
@@ -251,7 +266,7 @@ namespace ST10439147_PRO7311_POE.Services
             };
         }
 
-        
+
         // Creates a new service request associated with the specified contract.
         // A service request can only be created for contracts that are in the Active status. 
         // If the contract is expired or on hold, the operation does not create a service request and returns a failure response.
