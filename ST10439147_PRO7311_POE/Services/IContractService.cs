@@ -1,7 +1,12 @@
-﻿using ST10439147_PRO7311_POE.DTOs;
+using ST10439147_PRO7311_POE.DTOs;
 using ST10439147_PRO7311_POE.Models;
 namespace ST10439147_PRO7311_POE.Services
 {
+    
+    // IContractService defines the contract for managing contracts and their associated service requests within the application.
+    // It provides methods for creating, retrieving, updating, and deleting contracts, as well as managing their statuses and associated service requests.
+    // Searching and filtering contracts based on criteria such as start date and status is also supported. Additionally, it includes functionality for handling file uploads related to signed agreements.
+    
     public interface IContractService
     {
         // Contracts
@@ -25,3 +30,4 @@ namespace ST10439147_PRO7311_POE.Services
         Task<ServiceRequestResponseDto> DeleteServiceRequest(int requestId);
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

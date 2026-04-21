@@ -1,3 +1,7 @@
+///References
+///Claude: Used to set up the mdf and ldf file for the lecturer's machine without manual configuration, and to pre-warm the database connection pool on app startup to reduce first-login latency. Also provided guidance on structuring the HttpClient registration to ensure the AccessLevelHandler is used for all API requests, and on how to handle errors gracefully when the database is unavailable at startup.
+///Link: https://claude.ai/chat/894f0b1b-482f-4d52-890c-f74b49b5173c
+
 using GLMS.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +13,7 @@ using ST10439147_PRO7311_POE.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Resolve the Data folder path at runtime (works on any machine)
+// Resolve the Data folder path at runtime, makes sure to work on any machine without manual configuration. The MDF file will be created here if it doesn't exist.
 var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "Data");
 Directory.CreateDirectory(dataFolder);
 var mdfPath = Path.Combine(dataFolder, "ST10439147_PRO7311_POE.mdf");
@@ -36,7 +40,7 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 // Required by OpenExchangeStrategy (IHttpClientFactory) and any named clients
 builder.Services.AddHttpClient();
 
-// ── Register the handler that stamps X-Access-Level on every API request ──
+// Register the handler that stamps X-Access-Level on every API request
 builder.Services.AddScoped<AccessLevelHandler>();
 
 builder.Services.AddScoped<IUserService, UserService>();
@@ -50,7 +54,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler =
             System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 
-// ── Replace the bare HttpClient registration with one that uses the handler ──
+// Replace the bare HttpClient registration with one that uses the handler
 builder.Services.AddScoped(sp =>
 {
     var nav = sp.GetService<NavigationManager>();
@@ -64,7 +68,7 @@ builder.Services.AddScoped(sp =>
 
 var app = builder.Build();
 
-// ── Pre-warm the database connection pool ────────────────────────────────────
+/// Pre-warm the database connection pool on startup to reduce first-login latency. If the DB is unavailable, swallow the error and let it surface naturally when the user tries to log in.
 _ = Task.Run(async () =>
 {
     try
@@ -76,7 +80,7 @@ _ = Task.Run(async () =>
     }
     catch
     {
-        // Swallow — if the DB is unavailable at startup the app still loads;
+        // Swallow if the DB is unavailable at startup the app still loads;
         // the error will surface naturally when the user tries to log in.
     }
 });
@@ -100,3 +104,4 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

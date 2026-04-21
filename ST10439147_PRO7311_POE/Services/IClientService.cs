@@ -1,4 +1,4 @@
-﻿using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE.Models;
 
 namespace ST10439147_PRO7311_POE.Services
 {
@@ -11,7 +11,7 @@ namespace ST10439147_PRO7311_POE.Services
         Task<ClientResponseDto> DeleteClient(int id);
     }
 
-    // Simple response DTO – mirrors the pattern used by ContractService
+    // response DTO – mirrors the pattern used by ContractService
     public class ClientResponseDto
     {
         public Clients? Client { get; set; }
@@ -19,3 +19,4 @@ namespace ST10439147_PRO7311_POE.Services
         public bool Status { get; set; }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

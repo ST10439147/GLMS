@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using ST10439147_PRO7311_POE.Models;
 
 namespace GLMS.Services
@@ -32,3 +32,4 @@ namespace GLMS.Services
             : _currentUser.Role.ToString();
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

@@ -1,4 +1,4 @@
-﻿namespace ST10439147_PRO7311_POE.Services
+namespace ST10439147_PRO7311_POE.Services
 {
     public class FileService : IFileService
     {
@@ -6,6 +6,7 @@
         private readonly ILogger<FileService> _logger;
 
         // PDF magic bytes: every valid PDF file starts with "%PDF"
+        // This is a simple check to prevent non-PDF files from being uploaded with a .pdf extension.
         private static readonly byte[] PdfMagicBytes = { 0x25, 0x50, 0x44, 0x46 }; // %PDF
 
         public FileService(IWebHostEnvironment env, ILogger<FileService> logger)
@@ -14,27 +15,24 @@
             _logger = logger;
         }
 
+        // Validates the uploaded file and saves it to the server, returning the relative path for database storage.
+        // Throws InvalidOperationException if the file is invalid (e.g. wrong type, not a real PDF).
+        // The caller is responsible for catching exceptions and returning appropriate HTTP responses.
+        // The file is saved with a unique name to prevent overwriting existing files, and the original filename is not used for storage to enhance security.
         public async Task<string> SaveSignedAgreement(IFormFile file)
         {
             if (file == null || file.Length == 0)
                 throw new InvalidOperationException("No file was uploaded.");
 
-            // ── Extension check ─────────────────────────────────────────────
+            // Checking the extension is a quick initial filter, but we must also check the file header to ensure it's a valid PDF.
             var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
             if (extension != ".pdf")
                 throw new InvalidOperationException(
                     $"Invalid file type '{extension}'. Only .pdf files are allowed.");
 
-            // ── Magic bytes check (more reliable than ContentType) ───────────
-            // Browsers and HTTP clients often send "application/octet-stream"
-            // instead of "application/pdf", so we validate the file content
-            // itself by checking the PDF signature bytes (%PDF).
-            // NOTE: We do NOT wrap peekStream in a using block here — disposing
-            // it would close the underlying stream, causing CopyToAsync below to
-            // throw ObjectDisposedException. Instead we seek back to position 0
-            // after reading the header so the full file can still be copied.
             var peekStream = file.OpenReadStream();
             var header = new byte[4];
+            // Read the first 4 bytes to check for the PDF magic number.
             var bytesRead = await peekStream.ReadAsync(header, 0, 4);
             if (bytesRead < 4 || !header.SequenceEqual(PdfMagicBytes))
                 throw new InvalidOperationException(
@@ -44,7 +42,7 @@
             if (peekStream.CanSeek)
                 peekStream.Position = 0;
 
-            // ── UUID naming to prevent overwrites ────────────────────────────
+            // Save the file to wwwroot/uploads/agreements with a unique name to prevent collisions.
             var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "agreements");
             Directory.CreateDirectory(uploadsFolder);
 
@@ -63,7 +61,7 @@
             return Path.Combine("uploads", "agreements", uniqueFileName)
                        .Replace("\\", "/");
         }
-
+        // Given a stored relative path (e.g. "uploads/agreements/abc123.pdf"), return the absolute file path if it exists, or null if the file is missing.
         public string? GetFilePath(string storedPath)
         {
             var fullPath = Path.Combine(_env.WebRootPath, storedPath);
@@ -71,3 +69,4 @@
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

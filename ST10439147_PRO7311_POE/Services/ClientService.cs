@@ -1,9 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ST10439147_PRO7311_POE.Data;
 using ST10439147_PRO7311_POE.Models;
 
 namespace ST10439147_PRO7311_POE.Services
 {
+    // Service layer for managing Clients. This encapsulates all business logic related to clients.
+    // This includes validation rules and complex operations like cascading deletes.
+    // The controller should call this service for all client-related operations, and the service will handle the underlying logic.
     public class ClientService : IClientService
     {
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
@@ -13,18 +16,22 @@ namespace ST10439147_PRO7311_POE.Services
             _dbFactory = dbFactory;
         }
 
+        // Retrieves all clients from the database, ordered by name.
+        // The service layer is responsible for any future business rules related to retrieving clients (e.g., filtering, pagination) so that the controller can remain simple.
         public async Task<List<Clients>> GetAllClients()
         {
             using var ctx = _dbFactory.CreateDbContext();
             return await ctx.Clients.OrderBy(c => c.Name).ToListAsync();
         }
 
+        // Retrieves a single client by ID. The service layer allows us to add any future business rules (e.g., logging, caching) without changing the controller.
         public async Task<Clients?> GetClient(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
             return await ctx.Clients.FindAsync(id);
         }
 
+        // Creates a new client. The service layer is responsible for any validation rules (e.g., required fields, unique constraints) and for returning a consistent response object that the controller can use to generate the HTTP response.
         public async Task<ClientResponseDto> CreateClient(Clients client)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -39,8 +46,12 @@ namespace ST10439147_PRO7311_POE.Services
             };
         }
 
+        // Updates an existing client. The service layer checks if the client exists before updating and returns a consistent response object.
+        // The controller can then use this response to generate the appropriate HTTP response.
         public async Task<ClientResponseDto> UpdateClient(int id, Clients updated)
         {
+            // Only updating the client's basic details (name, contact, region) for simplicity.
+            // Contracts and service requests are not updated here, but could be handled in their own services.
             using var ctx = _dbFactory.CreateDbContext();
             var existing = await ctx.Clients.FindAsync(id);
             if (existing == null)
@@ -59,6 +70,10 @@ namespace ST10439147_PRO7311_POE.Services
             };
         }
 
+        // Deleting a client is complex due to the relationships with contracts and service requests.
+        // A client can only be deleted if ALL their contracts are Expired. This prevents orphaned active contracts.
+        // If the client is eligible for deletion, we must explicitly delete all related service requests and contracts in the correct order to satisfy FK constraints.
+        // The service layer is responsible for enforcing these rules and performing the cascading delete operation.
         public async Task<ClientResponseDto> DeleteClient(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -110,3 +125,4 @@ namespace ST10439147_PRO7311_POE.Services
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

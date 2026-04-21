@@ -1,7 +1,11 @@
-﻿using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE.Models;
 
 namespace ST10439147_PRO7311_POE.DTOs
 {
+    /// <summary>
+    /// UserResponseDTO is a data transfer object used to encapsulate the result of user-related operations, such as creation or update.
+    /// It contains the user object, a message describing the result, and a status indicating success or failure.
+    /// </summary>
     public class UserResponseDTO
     {
         public User? User { get; set; }
@@ -9,3 +13,4 @@ namespace ST10439147_PRO7311_POE.DTOs
         public bool Status { get; set; } = false;
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ST10439147_PRO7311_POE.Data;
 using ST10439147_PRO7311_POE.DTOs;
@@ -13,6 +13,7 @@ namespace GLMS.Services
         private readonly IHubContext<NotificationHub> _hubContext;
 
         public UserService(
+            // Injecting the database context factory which allows for efficient creation of DbContext instances as needed, without holding onto a long-lived context.
             IDbContextFactory<AppDbContext> dbFactory,
             IHubContext<NotificationHub> hubContext)
         {
@@ -20,7 +21,12 @@ namespace GLMS.Services
             _hubContext = hubContext;
         }
 
-        // ── Login ────────────────────────────────────────────────────────────
+        // Attempts to authenticate a user with the specified login credentials.
+        // The method returns <see langword="null"/> if no user matches the provided credentials.
+        // The password is compared directly; ensure credentials are handled securely.
+        // An object containing the user's login credentials with LoginDTO. The user name and password must be provided.
+        // A object representing the authenticated user if the credentials are valid; otherwise, null.
+        // If the user is not found or the credentials are invalid, the method returns.
         public async Task<User?> Login(LoginDTO loginDto)
         {
             using var context = _dbFactory.CreateDbContext();
@@ -30,7 +36,12 @@ namespace GLMS.Services
                     u.Password == loginDto.Password);
         }
 
-        // ── Create / Update ──────────────────────────────────────────────────
+        // Creates a new user or updates an existing user with the specified identifier.
+        // If a user with the specified identifier does not exist, a new user is created.
+        // Otherwise, the existing user's details are updated. The response message indicates the result of the operation.
+        // The user entity containing the details to create or update. Cannot be null.
+        // The identifier of the user to update. If no user with this identifier exists, a new user is created.
+        // A UserResponseDTO containing the user data, operation status, and a message indicating whether the user was created or updated.
         public async Task<UserResponseDTO> CreateUpdate(User user, int id)
         {
             using var context = _dbFactory.CreateDbContext();
@@ -56,7 +67,8 @@ namespace GLMS.Services
             return response;
         }
 
-        // ── Read one ─────────────────────────────────────────────────────────
+        // Retrieves the user record with the specified identifier from the database.
+        // If a user with the specified identifier is found, a response containing the user data and a success message is returned; otherwise, a response indicating that the user was not found is returned.
         public async Task<UserResponseDTO?> GetUserRecord(int id)
         {
             using var context = _dbFactory.CreateDbContext();
@@ -78,14 +90,16 @@ namespace GLMS.Services
             return response;
         }
 
-        // ── Read all ─────────────────────────────────────────────────────────
+        // Retrieves a list of all users from the database, ordered by their user names.
         public async Task<List<User>> GetAllUsers()
         {
             using var context = _dbFactory.CreateDbContext();
             return await context.ApplicationUsers.OrderBy(u => u.UserName).ToListAsync();
         }
 
-        // ── Delete ───────────────────────────────────────────────────────────
+        // Deletes the user record with the specified identifier from the database.
+        // If the user is found and deleted successfully, a response indicating success is returned; otherwise, a response indicating failure is returned.
+
         public async Task<UserResponseDTO?> DeleteUserRecord(int id)
         {
             using var context = _dbFactory.CreateDbContext();
@@ -109,8 +123,10 @@ namespace GLMS.Services
             return response;
         }
 
-        // ── Helpers ──────────────────────────────────────────────────────────
+        // Sends a notification message to all connected clients via SignalR.
+        // The message is broadcast to all clients subscribed to the "SignalRmessenger" event, allowing real-time updates in the UI.
         private Task Notify(string message) =>
             _hubContext.Clients.All.SendAsync("SignalRmessenger", message);
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

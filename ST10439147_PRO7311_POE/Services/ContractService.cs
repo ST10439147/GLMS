@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ST10439147_PRO7311_POE.Data;
 using ST10439147_PRO7311_POE.DTOs;
@@ -6,6 +6,10 @@ using ST10439147_PRO7311_POE.Hubs;
 using ST10439147_PRO7311_POE.Models;
 namespace ST10439147_PRO7311_POE.Services
 {
+    // The ContractService class implements the IContractService interface and provides methods for managing contracts and their associated service requests.
+    // It uses Entity Framework Core for database operations and SignalR for real-time notifications.
+    // The service includes methods for creating, retrieving, updating, and deleting contracts, as well as managing service requests under those contracts.
+    // It also includes functionality to search for contracts based on specific criteria and to save signed agreements.
     public class ContractService : IContractService
     {
         private readonly IHubContext<NotificationHub> _hubContext;
@@ -19,8 +23,9 @@ namespace ST10439147_PRO7311_POE.Services
             _dbFactory = dbFactory;
         }
 
-        // ── Contracts ──────────────────────────────────────────────────────────
-
+        // Creates a new contract with the provided details and saves it to the database. The method sets the initial status of the contract to Draft, adds it to the database context, and saves the changes.
+        // After successfully creating the contract, it sends a notification using SignalR to inform clients about the new contract creation.
+        // The method returns a response object containing the created contract, a success status, and a message confirming the creation.
         public async Task<ContractResponseDto> CreateContract(Contract contract)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -33,6 +38,10 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = contract, Message = msg, Status = true };
         }
 
+        // Retrieves a contract by its ID, including related client and service request information.
+        // The method queries the database for a contract matching the provided ID and includes related entities such as the client and service requests.
+        // If the contract is found, it returns a response object containing the contract details, a success status, and a message indicating that the contract was found.
+        // If the contract is not found, it returns a response object with a failure status and a message indicating that the contract was not found.
         public async Task<ContractResponseDto?> GetContract(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -47,12 +56,23 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = contract, Message = "Found.", Status = true };
         }
 
+        // Retrieves all contracts from the database, including related client information.
+        // The method returns a list of contracts, each with its associated client details.
+        // If no contracts are found, it returns an empty list.
+        // The method uses Entity Framework Core to query the database and includes the related client information for each contract.
+        // The resulting list of contracts is returned to the caller.
         public async Task<List<Contract>> GetAllContracts()
         {
             using var ctx = _dbFactory.CreateDbContext();
             return await ctx.Contracts.Include(c => c.Client).ToListAsync();
         }
 
+        // Updates an existing contract with new details provided in the updated contract object.
+        // The method first retrieves the existing contract from the database using the provided ID.
+        // If the contract is found, it updates the contract's properties with the new values and saves the changes to the database.
+        // The method then sends a notification using SignalR to inform clients about the contract update.
+        // The method returns a response object containing the updated contract, a success status, and a message confirming the update.
+        // If the contract is not found, it returns a response object with a failure status and a message indicating that the contract was not found.
         public async Task<ContractResponseDto> UpdateContract(int id, Contract updated)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -72,6 +92,11 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = existing, Message = msg, Status = true };
         }
 
+        // Updates the status of a specific contract identified by its ID.
+        // The method takes the contract ID and the new status as parameters, and it updates the status of the corresponding contract in the database.
+        // If the contract is found and updated successfully, the method returns a response object containing the updated contract, a success status, and a message indicating the change.
+        // If the contract is not found, it returns a failure response with an appropriate message.
+        // The method also sends a notification using SignalR to inform clients about the status change of the contract.
         public async Task<ContractResponseDto> SetContractStatus(int contractId, ContractStatus newStatus)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -87,6 +112,10 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = contract, Message = msg, Status = true };
         }
 
+        // Deletes a specific contract identified by its ID, but only if all associated service requests are either Rejected or Completed (or if there are no service requests).
+        // The method first retrieves the contract along with its related service requests from the database.
+        // It checks if the contract exists and then validates that all associated service requests are in a state that allows for deletion.
+        // If there are any service requests that are not Rejected or Completed, the method returns a failure response with a message indicating which service requests are blocking the deletion.
         public async Task<ContractResponseDto?> DeleteContract(int id)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -129,6 +158,13 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = contract, Message = msg, Status = true };
         }
 
+        // Search for contracts based on optional criteria: start date range and status.
+        // The method accepts three parameters: startFrom, startTo, and status.
+        // It constructs a query to filter contracts based on the provided criteria.
+        // If startFrom is specified, it filters for contracts with a StartDate greater than or equal to startFrom.
+        // If startTo is specified, it filters for contracts with a StartDate less than or equal to startTo.
+        // If status is specified, it filters for contracts that match the given status.
+        // The resulting list of contracts is ordered by StartDate and returned as a response.
         public async Task<List<Contract>> SearchContracts(
             DateTime? startFrom, DateTime? startTo, ContractStatus? status)
         {
@@ -145,6 +181,11 @@ namespace ST10439147_PRO7311_POE.Services
             return await query.OrderBy(c => c.StartDate).ToListAsync();
         }
 
+        // Saves the file path and original file name of a signed agreement for a specific contract.
+        // The method takes the contract ID, the file path where the signed agreement is stored, and the original file name as parameters.
+        // It updates the corresponding contract record in the database with this information.
+        // If the contract is found and updated successfully, it returns a response object containing the updated contract, a success status, and a message confirming that the signed agreement has been saved.
+        // If the contract is not found, it returns a failure response with an appropriate message.
         public async Task<ContractResponseDto> SaveSignedAgreement(
             int contractId, string filePath, string originalFileName)
         {
@@ -165,8 +206,14 @@ namespace ST10439147_PRO7311_POE.Services
             };
         }
 
-        // ── Service Requests ───────────────────────────────────────────────────
-
+        
+        // Creates a new service request associated with the specified contract.
+        // A service request can only be created for contracts that are in the Active status. 
+        // If the contract is expired or on hold, the operation does not create a service request and returns a failure response.
+        // The method also sends a notification upon successful creation.
+        // The service request to create. The associated contract must exist and be in the Active status.</param>
+        // A response object containing the created service request, a status indicator, and a message describing the result.
+        // If the contract does not exist or is not active, the response indicates failure and includes an explanatory message.
         public async Task<ServiceRequestResponseDto> CreateServiceRequest(ServiceRequest request)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -195,6 +242,8 @@ namespace ST10439147_PRO7311_POE.Services
             return new ServiceRequestResponseDto { ServiceRequest = request, Message = msg, Status = true };
         }
 
+        // Retrieves all service requests associated with a specific contract. The method returns a list of service requests that belong to the contract identified by the provided contract ID.
+        // Each service request in the list includes its details and is linked to the contract information. If no service requests are found for the given contract ID, the method returns an empty list.
         public async Task<List<ServiceRequest>> GetServiceRequestsByContract(int contractId)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -204,6 +253,9 @@ namespace ST10439147_PRO7311_POE.Services
                 .ToListAsync();
         }
 
+        // Updates the status of a specific service request identified by its ID.
+        // The method takes the service request ID and the new status as parameters, and it updates the status of the corresponding service request in the database. If the service request is found and updated successfully, the method returns a response object containing the updated service request, a success status, and a message indicating the change.
+        // If the service request is not found, it returns a failure response with an appropriate message.
         public async Task<ServiceRequestResponseDto> SetServiceRequestStatus(
             int requestId, ServiceRequestStatus newStatus)
         {
@@ -229,6 +281,10 @@ namespace ST10439147_PRO7311_POE.Services
             return new ServiceRequestResponseDto { ServiceRequest = sr, Message = msg, Status = true };
         }
 
+        // Deletes a specific service request identified by its ID, but only if its status is either Rejected or Completed. The method first retrieves the service request along with its associated contract from the database.
+        // It checks if the service request exists and then validates that its status allows for deletion.
+        // If the service request is not in a state that permits deletion, the method returns a failure response with a message indicating the current status and the requirement for deletion.
+        // If the service request is successfully deleted, it sends a notification using SignalR to inform clients about the deletion and returns a success response containing the deleted service request and a confirmation message.
         public async Task<ServiceRequestResponseDto> DeleteServiceRequest(int requestId)
         {
             using var ctx = _dbFactory.CreateDbContext();
@@ -243,7 +299,7 @@ namespace ST10439147_PRO7311_POE.Services
                     Status = false
                 };
 
-            // Only allow deletion when the request is Rejected or Completed
+            // Only allow deletion when the request is Rejected or Completed.
             if (sr.Status != ServiceRequestStatus.Rejected &&
                 sr.Status != ServiceRequestStatus.Completed)
             {
@@ -266,7 +322,9 @@ namespace ST10439147_PRO7311_POE.Services
             return new ServiceRequestResponseDto { ServiceRequest = sr, Message = msg, Status = true };
         }
 
-        // ── SignalR broadcast (Observer pattern) ───────────────────────────────
+        // SignalR broadcast (Observer pattern)
+        // This method sends a notification message to all connected clients using SignalR.
+        // The notification includes a message describing the event, the ID of the contract associated with the event, and the current status of that contract. 
         private async Task Notify(string message, int contractId, ContractStatus status)
         {
             var payload = new ContractResponseDto
@@ -279,3 +337,4 @@ namespace ST10439147_PRO7311_POE.Services
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

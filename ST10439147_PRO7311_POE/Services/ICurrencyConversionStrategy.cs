@@ -1,18 +1,19 @@
-﻿namespace ST10439147_PRO7311_POE.Services
+namespace ST10439147_PRO7311_POE.Services
 {
-    // ─── Strategy Pattern ─────────────────────────────────────────────────────
+    // Strategy pattern for currency conversion.
+    // This allows us to easily switch between different FX providers by implementing the same interface.
     // ICurrencyConversionStrategy allows switching FX providers via one
     // Program.cs line change. FinancialService never changes.
 
     public interface ICurrencyConversionStrategy
     {
-        /// <summary>Convert an amount from one currency to another using a live rate.</summary>
+        //Convert an amount from one currency to another using a live rate.
         Task<decimal> Convert(decimal amount, string fromCurrency, string toCurrency);
 
-        /// <summary>Get the live exchange rate between two currencies.</summary>
+        // Get the live exchange rate between two currencies.
         Task<decimal> GetRate(string fromCurrency, string toCurrency);
 
-        /// <summary>Return all available currency codes supported by the provider.</summary>
+        // Return all available currency codes supported by the provider.
         Task<List<string>> GetAvailableCurrencies();
     }
 
@@ -22,14 +23,14 @@
             : base(message, inner) { }
     }
 
-    // ── OpenExchangeRates / open.er-api.com strategy ─────────────────────────
+    // OpenExchangeRates.org is a popular FX API with a free tier that doesn't require an API key. It provides exchange rates relative to USD, so we convert via USD as the base currency.
     public class OpenExchangeStrategy : ICurrencyConversionStrategy
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _config;
         private readonly ILogger<OpenExchangeStrategy> _logger;
 
-        // Simple in-memory cache so we don't hammer the API on every keystroke
+        // In-memory cache so we don't hammer the API on every keystroke
         private Dictionary<string, decimal>? _cachedRates;   // all rates relative to USD
         private DateTime _cacheExpiry = DateTime.MinValue;
         private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
@@ -44,7 +45,8 @@
             _logger = logger;
         }
 
-        // ── Fetch & cache all USD-based rates ─────────────────────────────────
+        // Fetches exchange rates from the API, with caching. Rates are returned as a dictionary where keys are currency codes and values are rates relative to USD.
+        // If the cache is still valid, it returns the cached rates. Otherwise, it makes an HTTP request to fetch fresh rates, updates the cache, and returns the new rates.
         private async Task<Dictionary<string, decimal>> FetchRates()
         {
             if (_cachedRates != null && DateTime.UtcNow < _cacheExpiry)
@@ -79,7 +81,7 @@
             }
         }
 
-        // ── Cross-rate: from → USD → to ───────────────────────────────────────
+        // Get the exchange rate from 'fromCurrency' to 'toCurrency' using USD as the base.
         public async Task<decimal> GetRate(string fromCurrency, string toCurrency)
         {
             var from = fromCurrency.ToUpperInvariant();
@@ -96,12 +98,14 @@
             return Math.Round(toRate / fromRate, 6);
         }
 
+        // Convert an amount from 'fromCurrency' to 'toCurrency' using the live exchange rate.
         public async Task<decimal> Convert(decimal amount, string fromCurrency, string toCurrency)
         {
             var rate = await GetRate(fromCurrency, toCurrency);
             return Math.Round(amount * rate, 2);
         }
 
+        // Return a sorted list of available currency codes supported by the provider.
         public async Task<List<string>> GetAvailableCurrencies()
         {
             var rates = await FetchRates();
@@ -111,3 +115,4 @@
         private record ExchangeRateResponse(Dictionary<string, decimal>? Rates);
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

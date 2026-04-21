@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using static ST10439147_PRO7311_POE.Models.Clients;
 
@@ -7,6 +7,7 @@ namespace ST10439147_PRO7311_POE.Models
     // Status machine: Draft → Active → Expired | OnHold
     public enum ContractStatus { Draft, Active, Expired, OnHold }
 
+    // Service levels for contracts : Standard, Premium, Express, Economy
     public enum ServiceLvl { Standard, Premium, Express, Economy }
 
     [Table("Contract")]
@@ -35,7 +36,7 @@ namespace ST10439147_PRO7311_POE.Models
         [Required]
         public DateTime EndDate { get; set; }
 
-        // PDF "Signed Agreement" - path stored on disk, not as blob
+        // PDF "Signed Agreement" - path stored on disk
         [MaxLength(500)]
         public string? SignedAgreementPath { get; set; }
 
@@ -46,3 +47,4 @@ namespace ST10439147_PRO7311_POE.Models
         public ICollection<ServiceRequest> ServiceRequests { get; set; } = new List<ServiceRequest>();
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

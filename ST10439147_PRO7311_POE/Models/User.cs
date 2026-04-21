@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ST10439147_PRO7311_POE.Models
@@ -39,6 +39,7 @@ namespace ST10439147_PRO7311_POE.Models
 
         public int AccessLevel { get; set; } = (int)UserRole.Viewer;
 
+        // This property is not mapped to the database and is ignored during JSON serialization.
         [NotMapped]
         [System.Text.Json.Serialization.JsonIgnore]
         public UserRole Role => (UserRole)AccessLevel;

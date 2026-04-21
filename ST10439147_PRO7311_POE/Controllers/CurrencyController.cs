@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE.DTOs;
 using ST10439147_PRO7311_POE.Services;
 
+// This controller provides endpoints for currency conversion using the ICurrencyConversionStrategy service.
+// It includes endpoints to get the list of supported currencies, retrieve exchange rates, and convert amounts between currencies.
+// The controller handles exceptions from the currency conversion service and returns appropriate HTTP status codes and messages.
 [ApiController]
 [Route("api/v1/[controller]")]
 public class CurrencyController : ControllerBase
@@ -15,6 +18,7 @@ public class CurrencyController : ControllerBase
 
     // GET api/v1/currency/currencies
     // Returns the list of all supported currency codes (e.g. ["AUD","EUR","GBP","USD","ZAR",...])
+    // If the list cannot be retrieved (e.g. API failure), returns a 503 status with an error message
     [HttpGet("currencies")]
     public async Task<ActionResult<List<string>>> GetCurrencies()
     {
@@ -31,6 +35,8 @@ public class CurrencyController : ControllerBase
 
     // GET api/v1/currency/rate?from=USD&to=ZAR
     // Returns the current exchange rate between any two currencies
+    // If the rate cannot be retrieved (e.g. API failure), returns a 503 status with an error message
+    // Example response: { "fromCurrency": "USD", "toCurrency": "ZAR", "rate": 18.5 }
     [HttpGet("rate")]
     public async Task<ActionResult<CurrencyRateDto>> GetRate(
         [FromQuery] string from = "USD",
@@ -56,6 +62,8 @@ public class CurrencyController : ControllerBase
 
     // GET api/v1/currency/convert?amount=100&from=USD&to=ZAR
     // Converts any amount between any two currencies (called live as user types)
+    // Returns the converted amount along with the exchange rate used for the conversion
+    // If the conversion cannot be performed (e.g. API failure), returns a 503 status with an error message
     [HttpGet("convert")]
     public async Task<ActionResult<CurrencyRateDto>> Convert(
         [FromQuery] decimal amount,
@@ -81,3 +89,4 @@ public class CurrencyController : ControllerBase
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------
