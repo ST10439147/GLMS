@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# Include the database files in the Data folder
+!**/Data/*.mdf
+!**/Data/*.ldf
+
 # User-specific files
 *.rsuser
 *.suo
