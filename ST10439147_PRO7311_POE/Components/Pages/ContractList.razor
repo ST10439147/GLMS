@@ -1,5 +1,6 @@
 @page "/contracts"
 @using ST10439147_PRO7311_POE.Models
+@using ST10439147_PRO7311_POE.Services
 @inject HttpClient Http
 @rendermode InteractiveServer
 @inject ProtectedSessionStorage SessionStorage
@@ -225,15 +226,26 @@ else
         try
         {
             var resp = await Http.DeleteAsync($"api/v1/contract/Delete/{_deleteTarget.Id}");
-            if (resp.IsSuccessStatusCode)
+
+            // The API always returns HTTP 200 with a ContractResponseDto body.
+            // We must read the body and check Status — never rely on the HTTP status code alone.
+            var dto = await resp.Content.ReadFromJsonAsync<ContractResponseDto>();
+
+            if (dto?.Status == true)
             {
                 _contracts.Remove(_deleteTarget);
                 ShowAlert($"Contract '{_deleteTarget.Title}' deleted.", "alert-success");
                 _deleteTarget = null;
             }
-            else { ShowAlert("Delete failed.", "alert-danger"); }
+            else
+            {
+                // Show the exact reason returned by the server (e.g. Active/OnHold status,
+                // or service requests still Pending/Approved) so the user knows what to fix.
+                ShowAlert(dto?.Message ?? "Delete failed.", "alert-danger");
+                _deleteTarget = null;
+            }
         }
-        catch { ShowAlert("An error occurred.", "alert-danger"); }
+        catch { ShowAlert("An error occurred while trying to delete the contract.", "alert-danger"); }
         finally { _deleting = false; }
     }
 
