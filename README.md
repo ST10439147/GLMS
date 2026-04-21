@@ -18,7 +18,6 @@ A Blazor Server web application for managing logistics clients, contracts, servi
 - [Running Unit Tests](#running-unit-tests)
 - [Features](#features)
 - [Design Patterns](#design-patterns)
-- [User Roles & Access Levels](#user-roles--access-levels)
 
 ---
 
