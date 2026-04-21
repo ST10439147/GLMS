@@ -6,7 +6,7 @@ using ST10439147_PRO7311_POE.Services;
 using ST10439147_PRO7311_POE.Tests.Helpers;
 
 namespace ST10439147_PRO7311_POE.Tests
-{ }
+{ 
     // Tests the ContractService business rules:
     //   - Contracts with active service requests cannot be deleted.
     //   - SearchContracts filters correctly by status.
