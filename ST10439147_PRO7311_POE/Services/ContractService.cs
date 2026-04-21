@@ -53,6 +53,9 @@ namespace ST10439147_PRO7311_POE.Services
             if (contract == null)
                 return new ContractResponseDto { Message = $"Contract {id} not found.", Status = false };
 
+            // ✅ Auto-correct status on read
+            await ApplyAndSave(contract, ctx);
+
             return new ContractResponseDto { Contract = contract, Message = "Found.", Status = true };
         }
 
@@ -64,7 +67,12 @@ namespace ST10439147_PRO7311_POE.Services
         public async Task<List<Contract>> GetAllContracts()
         {
             using var ctx = _dbFactory.CreateDbContext();
-            return await ctx.Contracts.Include(c => c.Client).ToListAsync();
+            var contracts = await ctx.Contracts.Include(c => c.Client).ToListAsync();
+
+            foreach (var c in contracts)
+                await ApplyAndSave(c, ctx);
+
+            return contracts;
         }
 
         // Updates an existing contract with new details provided in the updated contract object.
@@ -158,6 +166,36 @@ namespace ST10439147_PRO7311_POE.Services
             return new ContractResponseDto { Contract = contract, Message = msg, Status = true };
         }
 
+        // Derives the correct runtime status for a contract based on business rules:
+        // 1. If EndDate has passed → Expired (takes priority)
+        // 2. If no signed agreement is uploaded → Draft
+        // The persisted Status is NOT overwritten here; this is a read-time projection.
+        // Call ApplyAndSave to persist the corrected status when needed.
+        private static ContractStatus ResolveStatus(Contract contract)
+        {
+            if (contract.EndDate < DateTime.UtcNow)
+                return ContractStatus.Expired;
+
+            if (string.IsNullOrEmpty(contract.SignedAgreementPath))
+                return ContractStatus.Draft;
+
+            return contract.Status;
+        }
+
+        // Checks whether the resolved status differs from the stored one,
+        // and if so saves the correction to the database. Returns the contract.
+        private async Task<Contract> ApplyAndSave(Contract contract, AppDbContext ctx)
+        {
+            var resolved = ResolveStatus(contract);
+            if (contract.Status != resolved)
+            {
+                contract.Status = resolved;
+                await ctx.SaveChangesAsync();
+                await Notify($"Contract '{contract.Title}' auto-status → {resolved}",
+                             contract.Id, resolved);
+            }
+            return contract;
+        }
         // Search for contracts based on optional criteria: start date range and status.
         // The method accepts three parameters: startFrom, startTo, and status.
         // It constructs a query to filter contracts based on the provided criteria.
@@ -166,7 +204,7 @@ namespace ST10439147_PRO7311_POE.Services
         // If status is specified, it filters for contracts that match the given status.
         // The resulting list of contracts is ordered by StartDate and returned as a response.
         public async Task<List<Contract>> SearchContracts(
-            DateTime? startFrom, DateTime? startTo, ContractStatus? status)
+    DateTime? startFrom, DateTime? startTo, ContractStatus? status)
         {
             using var ctx = _dbFactory.CreateDbContext();
             IQueryable<Contract> query = ctx.Contracts.Include(c => c.Client);
@@ -178,7 +216,14 @@ namespace ST10439147_PRO7311_POE.Services
             if (status.HasValue)
                 query = query.Where(c => c.Status == status.Value);
 
-            return await query.OrderBy(c => c.StartDate).ToListAsync();
+            var results = await query.OrderBy(c => c.StartDate).ToListAsync();
+
+            // expired/draft contracts may still appear if their stored status
+            // matched the search filter. This is intentional — it corrects the DB.
+            foreach (var c in results)
+                await ApplyAndSave(c, ctx);
+
+            return results;
         }
 
         // Saves the file path and original file name of a signed agreement for a specific contract.
