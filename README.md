@@ -221,9 +221,9 @@ dotnet test
 The test project uses an **EF Core InMemory** database provider so no SQL Server connection is required to run tests. Test coverage includes:
 
 - `ClientServiceTests` – CRUD operations on the Client service
-- `ContractServiceTests` – Contract creation, retrieval, and status logic
+- `ContractServiceTests` – Contract deletion rules, search/filter, and automatic status correction (expired end date → `Expired`; missing signed agreement → `Draft`)
 - `CurrencyCalculationTests` – Exchange rate conversion calculations
-- `FileValidationTests` – PDF upload validation logic
+- `FileValidationTests` – PDF upload validation logic (extension check, magic-byte check, 20 MB size limit)
 
 ---
 
@@ -235,8 +235,13 @@ The test project uses an **EF Core InMemory** database provider so no SQL Server
 
 **Contract Management**
 - Full contract lifecycle: Draft → Active → Expired / On Hold
+- Automatic status correction on every read:
+  - If a contract's `EndDate` has passed, its status is set to `Expired`
+  - If a contract has no uploaded signed agreement, its status is set to `Draft`
+  - `Expired` takes priority — a contract past its end date is `Expired` regardless of whether a document is present
+  - Corrections are persisted to the database and broadcast via SignalR
 - Service levels: Standard, Premium, Express, Economy
-- Upload and store a signed agreement PDF per contract
+- Upload and store a signed agreement PDF per contract (maximum **20 MB**, PDF files only)
 - Link contracts to clients with start/end dates
 
 **Service Requests**
@@ -247,19 +252,164 @@ The test project uses an **EF Core InMemory** database provider so no SQL Server
 - Convert contract values between currencies
 
 **Real-time Notifications**
-- SignalR hub (`/notificationHub`) pushes live notifications to connected clients
+- SignalR hub (`/notificationHub`) pushes live notifications to connected clients, including automatic status correction events
+
+---
+
+## File Upload Rules
+
+Signed agreement uploads are validated at two layers:
+
+| Layer | Rule |
+|---|---|
+| `FileService` (business layer) | File must not be empty; extension must be `.pdf`; first 4 bytes must match the PDF magic number (`%PDF`); file must not exceed **20 MB** |
+| ASP.NET / Kestrel (infrastructure) | `[RequestSizeLimit]` and `MultipartBodyLengthLimit` are set to 20 MB on the `UploadAgreement` endpoint, preventing oversized requests from being buffered before reaching application code |
+
+---
+
+## Contract Auto-Status Rules
+
+`ContractService` applies the following rules whenever a contract is read (`GetContract`, `GetAllContracts`, `SearchContracts`). If the resolved status differs from the stored value, the database record is updated and a SignalR notification is broadcast.
+
+| Condition | Resolved Status | Priority |
+|---|---|---|
+| `EndDate < DateTime.UtcNow` | `Expired` | 1 (highest) |
+| `SignedAgreementPath` is null or empty | `Draft` | 2 |
+| Neither condition applies | Stored status unchanged | — |
 
 ---
 
 ## Design Patterns
 
+### Strategy — Currency Conversion
+
+The `ICurrencyConversionStrategy` interface decouples the currency conversion logic from the rest of the application. Any class that implements `Convert`, `GetRate`, and `GetAvailableCurrencies` can be dropped in as the active provider by changing a single line in `Program.cs` — no other code changes required.
+
+```
+ICurrencyConversionStrategy         (interface – Services/)
+        │
+        └── OpenExchangeStrategy    (concrete – calls open.er-api.com or openexchangerates.org)
+```
+
+**Interface**
+```csharp
+// ICurrencyConversionStrategy.cs
+public interface ICurrencyConversionStrategy
+{
+    Task<decimal> Convert(decimal amount, string fromCurrency, string toCurrency);
+    Task<decimal> GetRate(string fromCurrency, string toCurrency);
+    Task<List<string>> GetAvailableCurrencies();
+}
+```
+
+**Concrete implementation** (`OpenExchangeStrategy`) fetches rates from the API, caches them for 10 minutes, and converts via USD as the base currency.
+
+**Registration** — swap providers without touching any consumer:
+```csharp
+// Program.cs
+builder.Services.AddScoped<ICurrencyConversionStrategy, OpenExchangeStrategy>();
+```
+
+---
+
+### Observer — Real-time Notifications (via SignalR)
+
+`ContractService` acts as the **Subject**: after every state-changing operation (create, update, delete, status change, auto-correction) it pushes a notification through `IHubContext<NotificationHub>`. Blazor pages act as **Observers** by subscribing to the `NotificationService` event and re-rendering when a message arrives — without polling.
+
+```
+ContractService  ──pushes──▶  IHubContext<NotificationHub>  ──broadcasts──▶  NotificationHub (/notificationHub)
+                                                                                      │
+                                                              ◀──listens──  NotificationService (per-session Scoped)
+                                                                                      │
+                                                              ◀──subscribes──  Blazor pages (OnMessageReceived event)
+```
+
+**Subject (ContractService)** — calls `Notify` after every mutation:
+```csharp
+// ContractService.cs
+private async Task Notify(string message, int contractId, ContractStatus status)
+{
+    var payload = new ContractResponseDto { Message = message, Status = true,
+        Contract = new Contract { Id = contractId, Status = status } };
+    await _hubContext.Clients.All.SendAsync("ReceiveStatusUpdate", payload);
+}
+```
+
+**Hub** — thin transport layer, no business logic:
+```csharp
+// NotificationHub.cs
+public class NotificationHub : Hub
+{
+    public async Task SendStatusUpdate(int contractId, string status)
+        => await Clients.All.SendAsync("ReceiveStatusUpdate", contractId, status);
+}
+```
+
+**Observer (NotificationService)** — one SignalR connection per user session; exposes an event that Blazor pages subscribe to:
+```csharp
+// NotificationService.cs
+public event Action<string>? OnMessageReceived;
+
+_hubConnection.On<ContractResponseDto>("ReceiveStatusUpdate", (data) =>
+{
+    OnMessageReceived?.Invoke(data.Message);
+});
+```
+
+---
+
+### Factory — DbContext Creation
+
+`IDbContextFactory<AppDbContext>` is registered in `Program.cs` so that services can create short-lived `DbContext` instances on demand using `_dbFactory.CreateDbContext()`. This is the correct pattern for Blazor Server, where a scoped `DbContext` would be shared across concurrent requests on the same circuit.
+
+`AppDbContextFactory` is the **design-time** counterpart — it implements `IDesignTimeDbContextFactory<AppDbContext>` so the EF Core CLI tools (`dotnet ef migrations add`, `dotnet ef database update`) can construct a context without running the full application.
+
+```
+IDbContextFactory<AppDbContext>   ──registered in──▶  Program.cs  (runtime – one DbContext per operation)
+AppDbContextFactory               ──used by──▶  EF Core CLI tooling only  (design-time migrations)
+```
+
+**Runtime registration:**
+```csharp
+// Program.cs
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseSqlServer(connectionString));
+```
+
+**Usage in services** — each method opens and disposes its own context:
+```csharp
+// ContractService.cs
+public async Task<List<Contract>> GetAllContracts()
+{
+    using var ctx = _dbFactory.CreateDbContext();
+    return await ctx.Contracts.Include(c => c.Client).ToListAsync();
+}
+```
+
+**Design-time factory** — resolves the MDF path at CLI invocation time so migrations work on any machine without manual configuration:
+```csharp
+// AppDbContextFactory.cs
+public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
+{
+    public AppDbContext CreateDbContext(string[] args)
+    {
+        var mdfPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "ST10439147_PRO7311_POE.mdf");
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlServer($"...AttachDbFilename={mdfPath}...")
+            .Options;
+        return new AppDbContext(options);
+    }
+}
+```
+
+---
+
+### Additional Patterns
+
 | Pattern | Where Used |
 |---|---|
-| **Strategy** | `ICurrencyConversionStrategy` – swap FX providers by changing one line in `Program.cs` |
-| **Repository / Service Layer** | `IClientService`, `IContractService`, `IUserService`, `IFileService` abstract data access from Blazor pages |
+| **Repository / Service Layer** | `IClientService`, `IContractService`, `IUserService`, `IFileService` abstract all data access from Blazor pages |
 | **Delegation (HTTP Handler)** | `AccessLevelHandler` – a `DelegatingHandler` that automatically stamps the `X-Access-Level` header on every outgoing API request based on the currently logged-in user |
-| **Factory** | `AppDbContextFactory` – design-time EF Core context factory required for migrations in a hosted Blazor Server app |
-
 
 ---
 
