@@ -6,9 +6,6 @@
 # dotenv files
 .env
 
-# Include the database files in the Data folder
-!**/Data/*.mdf
-!**/Data/*.ldf
 
 # User-specific files
 *.rsuser
@@ -274,8 +271,10 @@ ServiceFabricBackup/
 *.rptproj.bak
 
 # SQL Server files
-*.mdf
-*.ldf
+
+# Include the database files in the Data folder
+!**/Data/*.mdf
+!**/Data/*.ldf
 *.ndf
 
 # Business Intelligence projects
