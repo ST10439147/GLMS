@@ -6,6 +6,7 @@
 @inject UserState UserState
 @inject NavigationManager Nav
 @inject ProtectedSessionStorage SessionStorage
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 
 <PageTitle>@(_isEdit ? "Edit Contract" : "New Contract") – TechMove</PageTitle>
@@ -122,6 +123,7 @@ else
                     }
                 </div>
 
+                @* ── Signed Agreement drag-and-drop zone ── *@
                 <div style="margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid #e2e6ea">
                     <h6 style="margin:0 0 .8rem;color:var(--primary)">📎 Signed Agreement (PDF only)</h6>
 
@@ -132,18 +134,41 @@ else
                         </div>
                     }
 
-                    <div class="form-group" style="margin:0">
-                        <label>@(_isEdit && !string.IsNullOrEmpty(_existingFileName) ? "Replace PDF (optional)" : "Upload PDF") <span style="color:#6c757d;font-size:.82rem">— .pdf only</span></label>
-                        <InputFile OnChange="OnFileSelected" accept=".pdf" class="form-control" />
-                        @if (_fileError != null)
-                        {
-                            <span class="validation-message">@_fileError</span>
-                        }
+                    <label style="display:block;margin-bottom:.4rem;font-weight:500">
+                        @(_isEdit && !string.IsNullOrEmpty(_existingFileName) ? "Replace PDF (optional)" : "Upload PDF")
+                        <span style="color:#6c757d;font-size:.82rem"> — .pdf only</span>
+                    </label>
+
+                    @* Drop zone *@
+                    <div id="pdfDropZone" class="pdf-drop-zone @(_isDragOver ? "drag-over" : "") @(_selectedFile != null ? "has-file" : "")">
+                        @* Hidden native file input – targeted by JS and Blazor *@
+                        <InputFile id="pdfFileInput" OnChange="OnFileSelected" accept=".pdf" style="display:none" />
+
                         @if (_selectedFile != null)
                         {
-                            <span class="form-hint">Selected: @_selectedFile.Name (@((_selectedFile.Size / 1024.0).ToString("N1")) KB)</span>
+                            @* File chosen state *@
+                            <div class="drop-zone-content">
+                                <span class="drop-icon">✅</span>
+                                <p class="drop-primary">@_selectedFile.Name</p>
+                                <p class="drop-secondary">@((_selectedFile.Size / 1024.0).ToString("N1")) KB — <button type="button" class="link-btn" @onclick="ClearFile">Remove</button></p>
+                            </div>
+                        }
+                        else
+                        {
+                            @* Idle / drag-over state *@
+                            <div class="drop-zone-content">
+                                <span class="drop-icon">@(_isDragOver ? "📂" : "📄")</span>
+                                <p class="drop-primary">@(_isDragOver ? "Release to upload" : "Drag & drop your PDF here")</p>
+                                <p class="drop-secondary">or <button type="button" class="link-btn" @onclick="OpenFilePicker">browse files</button></p>
+                                <p class="drop-hint">PDF only · max 10 MB</p>
+                            </div>
                         }
                     </div>
+
+                    @if (_fileError != null)
+                    {
+                        <span class="validation-message">@_fileError</span>
+                    }
                 </div>
 
                 @if (!string.IsNullOrEmpty(_formError))
@@ -169,6 +194,145 @@ else
     }
 }
 
+@* ── Scoped styles ── *@
+<style>
+    .pdf-drop-zone {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 140px;
+        border: 2px dashed #ced4da;
+        border-radius: 10px;
+        background: #f8f9fa;
+        cursor: pointer;
+        transition: border-color .2s, background .2s, box-shadow .2s;
+        user-select: none;
+    }
+
+        .pdf-drop-zone:hover {
+            border-color: var(--primary, #4a6fa5);
+            background: #eef2f9;
+        }
+
+        .pdf-drop-zone.drag-over {
+            border-color: var(--primary, #4a6fa5);
+            background: #e8eef8;
+            box-shadow: 0 0 0 4px rgba(74,111,165,.15);
+        }
+
+        .pdf-drop-zone.has-file {
+            border-style: solid;
+            border-color: #28a745;
+            background: #f0f9f0;
+        }
+
+    .drop-zone-content {
+        text-align: center;
+        padding: 1.2rem;
+        pointer-events: none; /* let clicks fall through to the zone */
+    }
+
+    .drop-icon {
+        font-size: 2.4rem;
+        display: block;
+        margin-bottom: .5rem;
+        line-height: 1;
+    }
+
+    .drop-primary {
+        margin: 0 0 .25rem;
+        font-weight: 600;
+        font-size: .95rem;
+        color: #343a40;
+        word-break: break-all;
+    }
+
+    .drop-secondary {
+        margin: 0 0 .25rem;
+        font-size: .85rem;
+        color: #6c757d;
+    }
+
+    .drop-hint {
+        margin: 0;
+        font-size: .78rem;
+        color: #adb5bd;
+    }
+
+    /* Re-enable pointer events on interactive children */
+    .link-btn {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--primary, #4a6fa5);
+        font-size: inherit;
+        cursor: pointer;
+        text-decoration: underline;
+        pointer-events: all;
+    }
+
+        .link-btn:hover {
+            color: #2d4f7c;
+        }
+</style>
+
+@* ── Drop-zone JS (runs once after render) ── *@
+<script>
+    window._pdfDropZoneReady = false;
+
+    window.initPdfDropZone = function () {
+        if (window._pdfDropZoneReady) return;
+
+        const zone  = document.getElementById('pdfDropZone');
+        const input = document.getElementById('pdfFileInput');
+        if (!zone || !input) return;
+
+        // Clicking the zone (but not the link-btn buttons inside it) opens the picker
+        zone.addEventListener('click', function (e) {
+            if (e.target.classList.contains('link-btn')) return;
+            input.click();
+        });
+
+        // Drag visual feedback
+        zone.addEventListener('dragenter', function (e) {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', function (e) {
+            // Only remove class when truly leaving the zone (not entering a child)
+            if (!zone.contains(e.relatedTarget)) {
+                zone.classList.remove('drag-over');
+            }
+        });
+
+        // Drop: inject file into the hidden <input> and fire a change event so Blazor picks it up
+        zone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (!files || files.length === 0) return;
+
+            try {
+                const dt = new DataTransfer();
+                dt.items.add(files[0]);
+                input.files = dt.files;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (err) {
+                // DataTransfer not supported (very old browsers) – fall back to nothing
+                console.warn('Drag-drop file injection not supported:', err);
+            }
+        });
+
+        window._pdfDropZoneReady = true;
+    };
+</script>
+
 @code {
     [Parameter] public int? Id { get; set; }
 
@@ -177,6 +341,7 @@ else
     private bool _loadingForm = true;
     private bool _saving;
     private bool _submitted;
+    private bool _isDragOver;
 
     private string _title = string.Empty;
     private int _clientId;
@@ -219,6 +384,26 @@ else
             _loadingForm = false;
             StateHasChanged();
         }
+
+        // Initialise the drop-zone JS after every render so it still works after
+        // Blazor re-renders the DOM (the flag inside the JS function prevents double-binding).
+        if (UserState.IsManager && !_loadingForm)
+        {
+            await JS.InvokeVoidAsync("initPdfDropZone");
+        }
+    }
+
+    // ── File picker button (browse link inside the zone) ──
+    private async Task OpenFilePicker()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('pdfFileInput').click()");
+    }
+
+    private void ClearFile()
+    {
+        _selectedFile = null;
+        _fileError = null;
+        _isDragOver = false;
     }
 
     private async Task LoadClients()
@@ -251,12 +436,23 @@ else
     private void OnFileSelected(InputFileChangeEventArgs e)
     {
         _fileError = null;
+        _isDragOver = false;
         var file = e.File;
+
         if (!file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-        { _fileError = "Only .pdf files are allowed."; _selectedFile = null; }
+        {
+            _fileError = "Only .pdf files are allowed.";
+            _selectedFile = null;
+        }
         else if (file.Size > 10 * 1024 * 1024)
-        { _fileError = "File must be less than 10 MB."; _selectedFile = null; }
-        else { _selectedFile = file; }
+        {
+            _fileError = "File must be less than 10 MB.";
+            _selectedFile = null;
+        }
+        else
+        {
+            _selectedFile = file;
+        }
     }
 
     private async Task Save()
@@ -281,7 +477,6 @@ else
                 var resp = await Http.PutAsJsonAsync($"api/v1/contract/Update/{Id}", payload);
                 if (!resp.IsSuccessStatusCode) { _formError = "Failed to update contract."; return; }
 
-                // Update status separately if changed
                 var current = await Http.GetFromJsonAsync<ContractResponseDto>($"api/v1/contract/Get/{Id}");
                 if (current?.Contract != null && current.Contract.Status != _status)
                     await Http.PutAsync($"api/v1/contract/SetStatus/{Id}/{_status}", null);
