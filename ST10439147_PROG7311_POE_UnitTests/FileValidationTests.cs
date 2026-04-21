@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -6,12 +6,11 @@ using ST10439147_PRO7311_POE.Services;
 
 namespace ST10439147_PRO7311_POE.Tests
 {
-    /// <summary>
-    /// Tests the FileService upload validation rules:
-    ///   - Only .pdf extension is accepted.
-    ///   - File must contain valid PDF magic bytes (%PDF).
-    ///   - Empty/null files are rejected.
-    /// </summary>
+    // Tests the FileService upload validation rules:
+    //   - Only .pdf extension is accepted.
+    //   - File must contain valid PDF magic bytes (%PDF).
+    //   - Empty/null files are rejected.
+    
     public class FileValidationTests
     {
         private static readonly byte[] ValidPdfHeader = { 0x25, 0x50, 0x44, 0x46 }; // %PDF
@@ -85,3 +84,4 @@ namespace ST10439147_PRO7311_POE.Tests
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

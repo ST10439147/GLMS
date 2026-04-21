@@ -1,11 +1,10 @@
-﻿using Moq;
+using Moq;
 using ST10439147_PRO7311_POE.Services;
 
 namespace ST10439147_PRO7311_POE.Tests
 {
-    /// <summary>
-    /// Verifies the USD-relative cross-rate formula and interface contract.
-    /// </summary>
+    
+    // Verifies the USD-relative cross-rate formula and interface contract.
     public class CurrencyCalculationTests
     {
         private static decimal CrossRate(decimal fromUsdRate, decimal toUsdRate)
@@ -42,3 +41,4 @@ namespace ST10439147_PRO7311_POE.Tests
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

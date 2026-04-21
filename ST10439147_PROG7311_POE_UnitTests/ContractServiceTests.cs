@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Moq;
 using ST10439147_PRO7311_POE.Hubs;
 using ST10439147_PRO7311_POE.Models;
@@ -6,12 +6,10 @@ using ST10439147_PRO7311_POE.Services;
 using ST10439147_PRO7311_POE.Tests.Helpers;
 
 namespace ST10439147_PRO7311_POE.Tests
-{
-    /// <summary>
-    /// Tests the ContractService business rules:
-    ///   - Contracts with active service requests cannot be deleted.
-    ///   - SearchContracts filters correctly by status.
-    /// </summary>
+{ }
+    // Tests the ContractService business rules:
+    //   - Contracts with active service requests cannot be deleted.
+    //   - SearchContracts filters correctly by status.
     public class ContractServiceTests
     {
         private static ContractService CreateService(string? dbName = null)
@@ -127,3 +125,4 @@ namespace ST10439147_PRO7311_POE.Tests
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

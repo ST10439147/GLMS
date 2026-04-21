@@ -1,15 +1,13 @@
-﻿using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE.Models;
 using ST10439147_PRO7311_POE.Services;
 using ST10439147_PRO7311_POE.Tests.Helpers;
 using static ST10439147_PRO7311_POE.Models.Contract;
 
 namespace ST10439147_PRO7311_POE.Tests
 {
-    /// <summary>
-    /// Tests the ClientService business rules:
-    ///   - A client can only be deleted when ALL contracts are Expired.
-    ///   - Draft / Active / OnHold contracts block deletion.
-    /// </summary>
+    // Tests the ClientService business rules:
+    //   - A client can only be deleted when ALL contracts are Expired.
+    //   - Draft / Active / OnHold contracts block deletion.
     public class ClientServiceTests
     {
         private static ClientService CreateService(string? dbName = null)
@@ -82,3 +80,4 @@ namespace ST10439147_PRO7311_POE.Tests
         }
     }
 }
+//--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------
