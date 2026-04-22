@@ -53,7 +53,7 @@ namespace ST10439147_PRO7311_POE.Services
             if (contract == null)
                 return new ContractResponseDto { Message = $"Contract {id} not found.", Status = false };
 
-            // ✅ Auto-correct status on read
+            // Auto-correct status on read
             await ApplyAndSave(contract, ctx);
 
             return new ContractResponseDto { Contract = contract, Message = "Found.", Status = true };

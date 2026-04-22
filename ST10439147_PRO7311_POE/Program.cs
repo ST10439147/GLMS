@@ -1,6 +1,15 @@
 ///References
 ///Claude: Used to set up the mdf and ldf file for the lecturer's machine without manual configuration, and to pre-warm the database connection pool on app startup to reduce first-login latency. Also provided guidance on structuring the HttpClient registration to ensure the AccessLevelHandler is used for all API requests, and on how to handle errors gracefully when the database is unavailable at startup.
 ///Link: https://claude.ai/chat/894f0b1b-482f-4d52-890c-f74b49b5173c
+///Secure ASP.NET Core Blazor WebAssembly | Microsoft Learn: https://learn.microsoft.com/en-us/aspnet/core/blazor/security/webassembly/?view=aspnetcore-10.0
+///Implement HTTP call retries with exponential backoff with Polly - .NET | Microsoft Learn: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/implement-http-call-retries-exponential-backoff-polly
+///.NET dependency injection: https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection/overview
+///Overview of ASP.NET Core SignalR: https://learn.microsoft.com/en-us/aspnet/core/signalr/introduction?view=aspnetcore-10.0
+///Factory Method in C# / Design Patterns: https://refactoring.guru/design-patterns/factory-method/csharp/example
+///Factory method Design Pattern: https://www.geeksforgeeks.org/system-design/factory-method-for-designing-pattern/
+///Observer design pattern - .NET | Microsoft Learn: https://learn.microsoft.com/en-us/dotnet/standard/events/observer-design-pattern
+///Strategy in C#: https://refactoring.guru/design-patterns/strategy/csharp/example
+
 
 using GLMS.Services;
 using Microsoft.AspNetCore.Components;
