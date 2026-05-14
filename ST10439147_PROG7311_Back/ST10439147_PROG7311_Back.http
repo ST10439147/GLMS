@@ -1,0 +1,6 @@
+@ST10439147_PROG7311_Back_HostAddress = http://localhost:5210
+
+GET {{ST10439147_PROG7311_Back_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
