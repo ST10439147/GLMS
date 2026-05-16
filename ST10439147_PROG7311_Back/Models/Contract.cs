@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using static ST10439147_PRO7311_POE.Models.Clients;
+using static ST10439147_PRO7311_POE_Back.Models.Clients;
 
-namespace ST10439147_PRO7311_POE.Models
+namespace ST10439147_PRO7311_POE_Back.Models
 {
     // Status machine: Draft → Active → Expired | OnHold
     public enum ContractStatus { Draft, Active, Expired, OnHold }

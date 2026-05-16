@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.Models;
 
-namespace ST10439147_PRO7311_POE.Extensions
+namespace ST10439147_PRO7311_POE_Back.Extensions
 {
     // Extension methods that let any controller read the user's access level
     // from the X-Access-Level request header (set by AccessLevelHandler).

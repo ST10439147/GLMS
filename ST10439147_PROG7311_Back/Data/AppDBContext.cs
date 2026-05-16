@@ -1,8 +1,8 @@
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
 
-namespace ST10439147_PRO7311_POE.Data
+namespace ST10439147_PRO7311_POE_Back.Data
 {
     public class AppDbContext : DbContext
     {

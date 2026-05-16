@@ -1,5 +1,5 @@
-using ST10439147_PRO7311_POE.Models;
-namespace ST10439147_PRO7311_POE.DTOs
+using ST10439147_PRO7311_POE_Back.Models;
+namespace ST10439147_PRO7311_POE_Back.DTOs
 {
     /// <summary>
     /// ContractResponseDto is a data transfer object used to encapsulate the response from contract-related operations.

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.Models;
 
-namespace ST10439147_PRO7311_POE.Hubs
+namespace ST10439147_PRO7311_POE_Back.Hubs
 {
     // NotificationHub is the Subject in the Observer pattern.
     // It is kept intentionally thin - zero business logic lives here.

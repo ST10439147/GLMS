@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ST10439147_PRO7311_POE.Extensions;
-using ST10439147_PRO7311_POE.Services;
+using ST10439147_PRO7311_POE_Back.Extensions;
+using ST10439147_PRO7311_POE_Back.Services;
 
 // Represents an API controller that manages client resources, providing endpoints to retrieve, create, update, and delete clients.
 // This controller exposes RESTful endpoints for client management operations.

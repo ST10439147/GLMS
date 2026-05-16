@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ST10439147_PRO7311_POE.DTOs
+namespace ST10439147_PRO7311_POE_Back.DTOs
 {
     /// <summary>
     /// Login DTO (Data Transfer Object) encapsulates the user credentials required for authentication.

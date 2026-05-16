@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace ST10439147_PRO7311_POE.Data
+namespace ST10439147_PRO7311_POE_Back.Data
 {
     // Used only by EF tooling (add-migration / update-database).
     // Not involved in the running application at all.

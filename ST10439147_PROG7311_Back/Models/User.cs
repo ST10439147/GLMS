@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace ST10439147_PRO7311_POE.Models
+namespace ST10439147_PRO7311_POE_Back.Models
 {
     // Role convention matches the Blazor Tutorial pattern:
     // AccessLevel 1 = Admin  (full CRUD)

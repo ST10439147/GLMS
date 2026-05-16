@@ -1,6 +1,6 @@
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.Models;
 
-namespace ST10439147_PRO7311_POE.DTOs
+namespace ST10439147_PRO7311_POE_Back.DTOs
 {
     /// <summary>
     /// UserResponseDTO is a data transfer object used to encapsulate the result of user-related operations, such as creation or update.
