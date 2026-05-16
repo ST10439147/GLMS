@@ -1,6 +1,6 @@
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.Models;
 
-namespace ST10439147_PRO7311_POE.Services
+namespace ST10439147_PRO7311_POE_Back.Services
 {
     public interface IClientService
     {

@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using ST10439147_PRO7311_POE.Data;
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.Data;
+using ST10439147_PRO7311_POE_Back.Models;
 
-namespace ST10439147_PRO7311_POE.Services
+namespace ST10439147_PRO7311_POE_Back.Services
 {
     // Service layer for managing Clients. This encapsulates all business logic related to clients.
     // This includes validation rules and complex operations like cascading deletes.

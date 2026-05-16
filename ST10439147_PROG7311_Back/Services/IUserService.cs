@@ -1,7 +1,7 @@
-using ST10439147_PRO7311_POE.Models;
-using ST10439147_PRO7311_POE.DTOs;
+using ST10439147_PRO7311_POE_Back.Models;
+using ST10439147_PRO7311_POE_Back.DTOs;
 
-namespace GLMS.Services
+namespace ST10439147_PRO7311_POE_Back.Services
 {
     // IUserService defines the contract for user-related operations, including authentication, user management, and retrieval of user records.
     // The service is used by controllers to perform CRUD operations on user data and to authenticate users based on their credentials.

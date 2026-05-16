@@ -1,4 +1,4 @@
-namespace ST10439147_PRO7311_POE.Services
+namespace ST10439147_PRO7311_POE_Back.Services
 {
     // Strategy pattern for currency conversion.
     // This allows us to easily switch between different FX providers by implementing the same interface.

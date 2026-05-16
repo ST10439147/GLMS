@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.Models;
 
-namespace GLMS.Services
+namespace ST10439147_PRO7311_POE.Services
 {
     public class UserState
     {

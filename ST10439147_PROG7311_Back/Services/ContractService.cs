@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using ST10439147_PRO7311_POE.Data;
-using ST10439147_PRO7311_POE.DTOs;
-using ST10439147_PRO7311_POE.Hubs;
-using ST10439147_PRO7311_POE.Models;
-namespace ST10439147_PRO7311_POE.Services
+using ST10439147_PRO7311_POE_Back.Data;
+using ST10439147_PRO7311_POE_Back.DTOs;
+using ST10439147_PRO7311_POE_Back.Hubs;
+using ST10439147_PRO7311_POE_Back.Models;
+namespace ST10439147_PRO7311_POE_Back.Services
 {
     // The ContractService class implements the IContractService interface and provides methods for managing contracts and their associated service requests.
     // It uses Entity Framework Core for database operations and SignalR for real-time notifications.

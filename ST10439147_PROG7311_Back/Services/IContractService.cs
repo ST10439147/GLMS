@@ -1,6 +1,6 @@
-using ST10439147_PRO7311_POE.DTOs;
-using ST10439147_PRO7311_POE.Models;
-namespace ST10439147_PRO7311_POE.Services
+using ST10439147_PRO7311_POE_Back.DTOs;
+using ST10439147_PRO7311_POE_Back.Models;
+namespace ST10439147_PRO7311_POE_Back.Services
 {
     
     // IContractService defines the contract for managing contracts and their associated service requests within the application.

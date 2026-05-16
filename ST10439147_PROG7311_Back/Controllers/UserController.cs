@@ -1,9 +1,9 @@
-using GLMS.Services;
+using ST10439147_PRO7311_POE_Back.Services;
 using Microsoft.AspNetCore.Mvc;
-using ST10439147_PRO7311_POE.DTOs;
-using ST10439147_PRO7311_POE.Models;
+using ST10439147_PRO7311_POE_Back.DTOs;
+using ST10439147_PRO7311_POE_Back.Models;
 
-namespace ST10439147_PRO7311_POE.Controllers
+namespace ST10439147_PRO7311_POE_Back.Controllers
 {
     //This will be implemented in Part 3 of the POE, but I have included the code here for completeness and to avoid merge conflicts later on. The UserController will handle user authentication and management, including login, creating/updating user records, retrieving user information, and deleting user records. Access control is implemented based on user roles (Admin, Manager, Employee) to ensure that only authorized users can perform certain actions.
 
