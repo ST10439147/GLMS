@@ -42,7 +42,7 @@ public class ClientsController : ControllerBase
     // Creates a new client resource. This endpoint is restricted to users with a manager role.
     // Accepts a client object in the request body and attempts to create a new client. If the user does not have the required role, returns a 200 OK response with an access denied message; otherwise, returns a 200 OK response containing the result of the creation operation.
     [HttpPost("Create")]
-    public async Task<IActionResult> Create([FromBody] ST10439147_PRO7311_POE.Models.Clients client)
+    public async Task<IActionResult> Create([FromBody] ST10439147_PRO7311_POE_Back.Models.Clients client)
     {
         if (!this.IsManager())
             return Ok(new { Message = "Access denied.", Status = false });
@@ -57,7 +57,7 @@ public class ClientsController : ControllerBase
     [HttpPut("Update/{id}")]
     public async Task<IActionResult> Update(
         int id,
-        [FromBody] ST10439147_PRO7311_POE.Models.Clients updated)
+        [FromBody] ST10439147_PRO7311_POE_Back  .Models.Clients updated)
     {
         if (!this.IsManager())
             return Ok(new { Message = "Access denied.", Status = false });

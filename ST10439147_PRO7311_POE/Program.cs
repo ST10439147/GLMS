@@ -1,105 +1,44 @@
 ///References
-///Claude: Used to set up the mdf and ldf file for the lecturer's machine without manual configuration, and to pre-warm the database connection pool on app startup to reduce first-login latency. Also provided guidance on structuring the HttpClient registration to ensure the AccessLevelHandler is used for all API requests, and on how to handle errors gracefully when the database is unavailable at startup.
+///Claude: Used to set up the HttpClient registration so the AccessLevelHandler is applied to all API requests,
+///and on how to handle errors gracefully when the API is unavailable at startup.
 ///Link: https://claude.ai/chat/894f0b1b-482f-4d52-890c-f74b49b5173c
 ///Secure ASP.NET Core Blazor WebAssembly | Microsoft Learn: https://learn.microsoft.com/en-us/aspnet/core/blazor/security/webassembly/?view=aspnetcore-10.0
 ///Implement HTTP call retries with exponential backoff with Polly - .NET | Microsoft Learn: https://learn.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/implement-http-call-retries-exponential-backoff-polly
 ///.NET dependency injection: https://learn.microsoft.com/en-us/dotnet/core/extensions/dependency-injection/overview
 ///Overview of ASP.NET Core SignalR: https://learn.microsoft.com/en-us/aspnet/core/signalr/introduction?view=aspnetcore-10.0
-///Factory Method in C# / Design Patterns: https://refactoring.guru/design-patterns/factory-method/csharp/example
-///Factory method Design Pattern: https://www.geeksforgeeks.org/system-design/factory-method-for-designing-pattern/
-///Observer design pattern - .NET | Microsoft Learn: https://learn.microsoft.com/en-us/dotnet/standard/events/observer-design-pattern
-///Strategy in C#: https://refactoring.guru/design-patterns/strategy/csharp/example
 
-
-using GLMS.Services;
-using Microsoft.AspNetCore.Components;
-using Microsoft.EntityFrameworkCore;
-using ST10439147_PRO7311_POE.Components;
-using ST10439147_PRO7311_POE.Data;
-using ST10439147_PRO7311_POE.DTOs;
-using ST10439147_PRO7311_POE.Hubs;
 using ST10439147_PRO7311_POE.Services;
+using Microsoft.AspNetCore.Components;
+using ST10439147_PRO7311_POE.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Resolve the Data folder path at runtime, makes sure to work on any machine without manual configuration. The MDF file will be created here if it doesn't exist.
-var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "Data");
-Directory.CreateDirectory(dataFolder);
-var mdfPath = Path.Combine(dataFolder, "ST10439147_PRO7311_POE.mdf");
-var connectionString = $"Server=(localdb)\\mssqllocaldb;" +
-                       $"AttachDbFilename={mdfPath};" +
-                       $"Database=ST10439147_GLMS_DB;" +
-                       $"Integrated Security=True;" +
-                       $"MultipleActiveResultSets=true";
-
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddSignalR();
+builder.Services.AddScoped<UserState>();
+builder.Services.AddScoped<AccessLevelHandler>();
 builder.Services.AddScoped<NotificationService>();
 
-// allow data to be shared between pages
-builder.Services.AddScoped<LoginDTO>();
-builder.Services.AddScoped<UserState>();
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7055";
 
-builder.Services.AddDbContextFactory<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
-// Required by OpenExchangeStrategy (IHttpClientFactory) and any named clients
-builder.Services.AddHttpClient();
-
-// Register the handler that stamps X-Access-Level on every API request
-builder.Services.AddScoped<AccessLevelHandler>();
-
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IContractService, ContractService>();
-builder.Services.AddScoped<IClientService, ClientService>();
-builder.Services.AddScoped<IFileService, FileService>();
-builder.Services.AddScoped<ICurrencyConversionStrategy, OpenExchangeStrategy>();
-
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-        options.JsonSerializerOptions.ReferenceHandler =
-            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
-
-// Replace the bare HttpClient registration with one that uses the handler
 builder.Services.AddScoped(sp =>
 {
-    var nav = sp.GetService<NavigationManager>();
-    var baseUrl = nav?.BaseUri ?? "https://localhost:7181/";
-
     var handler = sp.GetRequiredService<AccessLevelHandler>();
     handler.InnerHandler = new HttpClientHandler();
 
-    return new HttpClient(handler) { BaseAddress = new Uri(baseUrl) };
+    return new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl + "/") };
 });
 
 var app = builder.Build();
 
-/// Pre-warm the database connection pool on startup to reduce first-login latency. If the DB is unavailable, swallow the error and let it surface naturally when the user tries to log in.
-_ = Task.Run(async () =>
-{
-    try
-    {
-        await using var ctx = app.Services
-            .GetRequiredService<IDbContextFactory<AppDbContext>>()
-            .CreateDbContext();
-        await ctx.Database.ExecuteSqlRawAsync("SELECT 1");
-    }
-    catch
-    {
-        // Swallow if the DB is unavailable at startup the app still loads;
-        // the error will surface naturally when the user tries to log in.
-    }
-});
-
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -108,9 +47,6 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-app.MapControllers();
-
-app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();
 //--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

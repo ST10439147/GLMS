@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace ST10439147_PRO7311_POE.Migrations
+namespace ST10439147_PRO7311_POE_Back.Migrations
 {
     /// <inheritdoc />
     public partial class recreate : Migration

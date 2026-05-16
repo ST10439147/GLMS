@@ -1,8 +1,9 @@
 @page "/login"
 @using ST10439147_PRO7311_POE.Models
+@using ST10439147_PRO7311_POE.DTOs
 @layout EmptyLayout
 @inject ProtectedSessionStorage SessionStorage
-@inject IUserService UserService
+@inject HttpClient Http
 @rendermode InteractiveServer
 @inject NavigationManager Nav
 @inject UserState UserState
@@ -111,18 +112,21 @@
         try
         {
             var loginDto = new LoginDTO { UserName = _username, Password = _password };
-            var user = await UserService.Login(loginDto);
+            var resp = await Http.PostAsJsonAsync("api/user/Login", loginDto);
 
-            if (user != null)
+            if (resp.IsSuccessStatusCode)
             {
-                UserState.CurrentUser = user;
-                await SessionStorage.SetAsync("currentUser", user);
-                Nav.NavigateTo("/");
+                var user = await resp.Content.ReadFromJsonAsync<User>();
+                if (user != null)
+                {
+                    UserState.CurrentUser = user;
+                    await SessionStorage.SetAsync("currentUser", user);
+                    Nav.NavigateTo("/");
+                    return;
+                }
             }
-            else
-            {
-                _errorMsg = "Invalid username or password.";
-            }
+
+            _errorMsg = "Invalid username or password.";
         }
         catch (Exception ex)
         {

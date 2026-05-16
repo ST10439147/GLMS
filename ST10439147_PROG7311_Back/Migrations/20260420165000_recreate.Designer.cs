@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using ST10439147_PRO7311_POE.Data;
+using ST10439147_PRO7311_POE_Back.Data;
 
 #nullable disable
 
-namespace ST10439147_PRO7311_POE.Migrations
+namespace ST10439147_PRO7311_POE_Back.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     [Migration("20260420165000_recreate")]
@@ -235,3 +235,4 @@ namespace ST10439147_PRO7311_POE.Migrations
         }
     }
 }
+

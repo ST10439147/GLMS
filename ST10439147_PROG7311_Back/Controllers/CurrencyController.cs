@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ST10439147_PRO7311_POE.DTOs;
-using ST10439147_PRO7311_POE.Services;
+using ST10439147_PRO7311_POE_Back.DTOs;
+using ST10439147_PRO7311_POE_Back.Services;
 
 // This controller provides endpoints for currency conversion using the ICurrencyConversionStrategy service.
 // It includes endpoints to get the list of supported currencies, retrieve exchange rates, and convert amounts between currencies.

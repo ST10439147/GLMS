@@ -1,5 +1,3 @@
-using GLMS.Services;
-
 namespace ST10439147_PRO7311_POE.Services
 {
     // Automatically attaches the logged-in user's access level as a request header so API controllers can authorise correctly.

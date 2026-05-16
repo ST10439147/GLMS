@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using ST10439147_PRO7311_POE.DTOs;
-using ST10439147_PRO7311_POE.Extensions;
-using ST10439147_PRO7311_POE.Models;
-using ST10439147_PRO7311_POE.Services;
+using ST10439147_PRO7311_POE_Back.DTOs;
+using ST10439147_PRO7311_POE_Back.Extensions;
+using ST10439147_PRO7311_POE_Back.Models;
+using ST10439147_PRO7311_POE_Back.Services;
 
 
 namespace ST10439147_PRO7311_POE.Controllers

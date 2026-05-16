@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using ST10439147_PRO7311_POE.Data;
+using ST10439147_PRO7311_POE_Back.Data;
 
 #nullable disable
 
-namespace ST10439147_PRO7311_POE.Migrations
+namespace ST10439147_PRO7311_POE_Back.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
