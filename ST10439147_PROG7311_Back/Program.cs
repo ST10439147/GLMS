@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using ST10439147_PRO7311_POE_Back.Data;
 using ST10439147_PRO7311_POE_Back.DTOs;
 using ST10439147_PRO7311_POE_Back.Hubs;
 using ST10439147_PRO7311_POE_Back.Services;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,7 +36,34 @@ builder.Services.AddControllers()
             System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "TechMove Contract Management API",
+        Version = "v1",
+        Description =
+            "REST API for managing contracts, clients, service requests, and currency conversion. " +
+            "Pass the caller's access level in the X-Access-Level request header " +
+            "(1 = Admin, 2 = Manager, 3 = Viewer)."
+    });
+
+    // Pull in /// XML summary comments for self-documenting endpoints
+    var xmlPath = Path.Combine(AppContext.BaseDirectory,
+        $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
+    if (File.Exists(xmlPath))
+        options.IncludeXmlComments(xmlPath);
+
+    // Document the custom header-based access-level scheme
+    options.AddSecurityDefinition("AccessLevel", new OpenApiSecurityScheme
+    {
+        Name = "X-Access-Level",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Description = "Access level: 1 = Admin, 2 = Manager, 3 = Viewer"
+    });
+
+});
 
 builder.Services.AddCors(options =>
 {
@@ -47,11 +76,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+// Swagger available in all environments so the API is always testable
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "TechMove API v1");
+    options.RoutePrefix = "swagger";
+});
 
 app.UseCors("BlazorClient");
 app.UseHttpsRedirection();

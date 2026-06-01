@@ -190,7 +190,7 @@ else
     private async Task LoadContracts()
     {
         _loading = true;
-        try { _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/v1/contract/All") ?? new(); }
+        try { _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/contracts") ?? new(); }
         catch { ShowAlert("Failed to load contracts.", "alert-danger"); }
         finally { _loading = false; }
     }
@@ -204,7 +204,7 @@ else
             if (_filterFrom.HasValue) qs.Add($"startFrom={_filterFrom.Value:yyyy-MM-dd}");
             if (_filterTo.HasValue) qs.Add($"startTo={_filterTo.Value:yyyy-MM-dd}");
             if (!string.IsNullOrEmpty(_filterStatus)) qs.Add($"status={_filterStatus}");
-            var url = "api/v1/contract/Search" + (qs.Any() ? "?" + string.Join("&", qs) : "");
+            var url = "api/contracts" + (qs.Any() ? "?" + string.Join("&", qs) : "");
             _contracts = await Http.GetFromJsonAsync<List<Contract>>(url) ?? new();
         }
         catch { ShowAlert("Search failed.", "alert-danger"); }
@@ -225,7 +225,7 @@ else
         _deleting = true;
         try
         {
-            var resp = await Http.DeleteAsync($"api/v1/contract/Delete/{_deleteTarget.Id}");
+            var resp = await Http.DeleteAsync($"api/contracts/{_deleteTarget.Id}");
 
             // The API always returns HTTP 200 with a ContractResponseDto body.
             // We must read the body and check Status — never rely on the HTTP status code alone.

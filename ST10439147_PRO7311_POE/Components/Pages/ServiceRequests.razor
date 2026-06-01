@@ -176,11 +176,11 @@ else
     {
         try
         {
-            _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/v1/contract/All") ?? new();
+            _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/contracts") ?? new();
             foreach (var c in _contracts)
             {
                 var srs = await Http.GetFromJsonAsync<List<ServiceRequest>>(
-                    $"api/v1/contract/ServiceRequests/{c.Id}") ?? new();
+                    $"api/contracts/{c.Id}/requests") ?? new();
                 foreach (var sr in srs) sr.Contract = c;
                 _all.AddRange(srs);
             }

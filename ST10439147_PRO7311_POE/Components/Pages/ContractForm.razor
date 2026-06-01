@@ -416,7 +416,7 @@ else
     {
         try
         {
-            var dto = await Http.GetFromJsonAsync<ContractResponseDto>($"api/v1/contract/Get/{Id}");
+            var dto = await Http.GetFromJsonAsync<ContractResponseDto>($"api/contracts/{Id}");
             if (dto?.Contract != null)
             {
                 var c = dto.Contract;
@@ -474,12 +474,12 @@ else
             {
                 var svcLevel = Enum.Parse<ServiceLvl>(_serviceLevel);
                 var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = svcLevel, StartDate = _startDate, EndDate = _endDate };
-                var resp = await Http.PutAsJsonAsync($"api/v1/contract/Update/{Id}", payload);
+                var resp = await Http.PutAsJsonAsync($"api/contracts/{Id}", payload);
                 if (!resp.IsSuccessStatusCode) { _formError = "Failed to update contract."; return; }
 
-                var current = await Http.GetFromJsonAsync<ContractResponseDto>($"api/v1/contract/Get/{Id}");
+                var current = await Http.GetFromJsonAsync<ContractResponseDto>($"api/contracts/{Id}");
                 if (current?.Contract != null && current.Contract.Status != _status)
-                    await Http.PutAsync($"api/v1/contract/SetStatus/{Id}/{_status}", null);
+                    await Http.PatchAsJsonAsync($"api/contracts/{Id}/status", new { Status = _status });
 
                 contractId = Id!.Value;
             }
@@ -487,7 +487,7 @@ else
             {
                 var svcLevel = Enum.Parse<ServiceLvl>(_serviceLevel);
                 var payload = new { Title = _title, ClientId = _clientId, ServiceLevel = svcLevel, StartDate = _startDate, EndDate = _endDate, Status = ContractStatus.Draft };
-                var resp = await Http.PostAsJsonAsync("api/v1/contract/Create", payload);
+                var resp = await Http.PostAsJsonAsync("api/contracts", payload);
                 if (!resp.IsSuccessStatusCode) { _formError = "Failed to create contract."; return; }
                 var created = await resp.Content.ReadFromJsonAsync<ContractResponseDto>();
                 contractId = created?.Contract?.Id ?? 0;
@@ -500,7 +500,7 @@ else
                 using var content = new MultipartFormDataContent();
                 var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 content.Add(new StreamContent(stream), "file", _selectedFile.Name);
-                var uploadResp = await Http.PostAsync($"api/v1/contract/UploadAgreement/{contractId}", content);
+                var uploadResp = await Http.PostAsync($"api/contracts/{contractId}/agreement", content);
                 if (!uploadResp.IsSuccessStatusCode)
                     ShowAlert("Contract saved, but PDF upload failed. You can retry from the detail page.", "alert-warning");
             }

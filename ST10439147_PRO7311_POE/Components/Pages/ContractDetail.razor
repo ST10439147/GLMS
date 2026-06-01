@@ -282,11 +282,11 @@ else
         _loading = true;
         try
         {
-            var dto = await Http.GetFromJsonAsync<ContractResponseDto>($"api/v1/contract/Get/{Id}");
+            var dto = await Http.GetFromJsonAsync<ContractResponseDto>($"api/contracts/{Id}");
             _contract = dto?.Contract;
             if (_contract != null)
                 _serviceRequests = await Http.GetFromJsonAsync<List<ServiceRequest>>(
-                    $"api/v1/contract/ServiceRequests/{Id}") ?? new();
+                    $"api/contracts/{Id}/requests") ?? new();
         }
         catch { ShowAlert("Failed to load contract.", "alert-danger"); }
         finally { _loading = false; }
@@ -328,12 +328,12 @@ else
                 ExchangeRateUsed = _rate,
                 Status = ServiceRequestStatus.Pending
             };
-            var resp = await Http.PostAsJsonAsync("api/v1/contract/SubmitRequest", payload);
+            var resp = await Http.PostAsJsonAsync("api/contracts/requests", payload);
             if (resp.IsSuccessStatusCode)
             {
                 _srDescription = string.Empty; _srCostUsd = 0; _zarDisplay = "—"; _showSrForm = false;
                 _serviceRequests = await Http.GetFromJsonAsync<List<ServiceRequest>>(
-                    $"api/v1/contract/ServiceRequests/{Id}") ?? _serviceRequests;
+                    $"api/contracts/{Id}/requests") ?? _serviceRequests;
                 ShowAlert("Service request submitted.", "alert-success");
             }
             else
@@ -357,8 +357,8 @@ else
         StateHasChanged(); // show spinner immediately
         try
         {
-            var resp = await Http.PutAsync(
-                $"api/v1/contract/SetRequestStatus/{sr.Id}/{newStatus}", null);
+            var resp = await Http.PatchAsJsonAsync(
+                $"api/contracts/requests/{sr.Id}/status", new { Status = newStatus });
 
             if (resp.IsSuccessStatusCode)
             {
@@ -383,7 +383,7 @@ else
         _statusChanging = true;
         try
         {
-            var resp = await Http.PutAsync($"api/v1/contract/SetStatus/{Id}/{newStatus}", null);
+            var resp = await Http.PatchAsJsonAsync($"api/contracts/{Id}/status", new { Status = newStatus });
             if (resp.IsSuccessStatusCode && _contract != null)
             { _contract.Status = newStatus; ShowAlert($"Status updated to {newStatus}.", "alert-success"); }
             else { ShowAlert("Status update failed.", "alert-danger"); }

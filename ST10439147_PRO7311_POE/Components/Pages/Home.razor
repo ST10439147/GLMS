@@ -156,7 +156,7 @@ else
     {
         try
         {
-            _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/v1/contract/All") ?? new();
+            _contracts = await Http.GetFromJsonAsync<List<Contract>>("api/contracts") ?? new();
         }
         catch { }
         finally { _loading = false; }
