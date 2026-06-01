@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
-using ST10439147_PRO7311_POE.Services;
+using ST10439147_PRO7311_POE_Back.Services;
 
 namespace ST10439147_PRO7311_POE.Tests
 {

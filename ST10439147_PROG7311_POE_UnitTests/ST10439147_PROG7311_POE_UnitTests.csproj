@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ST10439147_PRO7311_POE\ST10439147_PRO7311_POE.csproj" />
+    <ProjectReference Include="..\ST10439147_PROG7311_Back\ST10439147_PROG7311_Back.csproj" />
   </ItemGroup>
 
   <ItemGroup>

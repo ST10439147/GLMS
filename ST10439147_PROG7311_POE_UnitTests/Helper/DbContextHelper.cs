@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using ST10439147_PRO7311_POE.Data;
+using ST10439147_PRO7311_POE_Back.Data;
 
 namespace ST10439147_PRO7311_POE.Tests.Helpers
 {

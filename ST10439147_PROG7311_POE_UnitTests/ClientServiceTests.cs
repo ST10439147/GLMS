@@ -1,7 +1,7 @@
-using ST10439147_PRO7311_POE.Models;
-using ST10439147_PRO7311_POE.Services;
+using ST10439147_PRO7311_POE_Back.Models;
+using ST10439147_PRO7311_POE_Back.Services;
 using ST10439147_PRO7311_POE.Tests.Helpers;
-using static ST10439147_PRO7311_POE.Models.Contract;
+using static ST10439147_PRO7311_POE_Back.Models.Contract;
 
 namespace ST10439147_PRO7311_POE.Tests
 {

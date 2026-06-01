@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.SignalR;
 using Moq;
-using ST10439147_PRO7311_POE.Hubs;
-using ST10439147_PRO7311_POE.Models;
-using ST10439147_PRO7311_POE.Services;
+using ST10439147_PRO7311_POE_Back.Hubs;
+using ST10439147_PRO7311_POE_Back.Models;
+using ST10439147_PRO7311_POE_Back.Services;
 using ST10439147_PRO7311_POE.Tests.Helpers;
 
 namespace ST10439147_PRO7311_POE.Tests
