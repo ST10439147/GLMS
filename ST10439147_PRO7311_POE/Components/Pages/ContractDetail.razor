@@ -6,8 +6,6 @@
 @inject ProtectedSessionStorage SessionStorage
 @inject UserState UserState
 @inject NavigationManager Nav
-@inject NotificationService Notifications
-@implements IAsyncDisposable
 
 <PageTitle>Contract #@Id – TechMove</PageTitle>
 
@@ -255,9 +253,6 @@ else
     private string _alertMsg = string.Empty;
     private string _alertClass = string.Empty;
 
-    // Stored reference so we can properly unsubscribe in DisposeAsync
-    private Action<string>? _notificationHandler;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_sessionChecked)
@@ -276,23 +271,10 @@ else
                 catch { Nav.NavigateTo("/login"); return; }
             }
 
-            // Subscribe before starting so no messages are missed
-            _notificationHandler = msg => { _alertMsg = msg; _alertClass = "alert-info"; _ = InvokeAsync(StateHasChanged); };
-            Notifications.OnMessageReceived += _notificationHandler;
-            await Notifications.StartAsync();
-
             await LoadContract();
             await LoadRate();
             StateHasChanged();
         }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_notificationHandler != null)
-            Notifications.OnMessageReceived -= _notificationHandler;
-
-        await Notifications.DisposeAsync();
     }
 
     private async Task LoadContract()

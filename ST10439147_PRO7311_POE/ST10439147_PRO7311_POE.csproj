@@ -13,6 +13,11 @@
     <PackageReference Include="Polly" Version="8.6.6" />
     <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageReference Include="Solutaris.InfoWARE.ProtectedBrowserStorage" Version="1.0.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ST10439147_PROG7311_Back\ST10439147_PROG7311_Back.csproj" />
   </ItemGroup>
 
 </Project>
