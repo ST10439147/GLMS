@@ -210,7 +210,7 @@ else
     private async Task Load()
     {
         _loading = true;
-        try { _clients = await Http.GetFromJsonAsync<List<ST10439147_PRO7311_POE.Models.Clients>>("api/v1/clients/All") ?? new(); }
+        try { _clients = await Http.GetFromJsonAsync<List<ST10439147_PRO7311_POE.Models.Clients>>("api/clients") ?? new(); }
         catch { ShowAlert("Failed to load clients.", "alert-danger"); }
         finally { _loading = false; }
     }
@@ -239,9 +239,9 @@ else
             var payload = new { Name = _fName, ContactDetails = _fContact, Region = _fRegion };
             System.Net.Http.HttpResponseMessage resp;
             if (_editId > 0)
-                resp = await Http.PutAsJsonAsync($"api/v1/clients/Update/{_editId}", payload);
+                resp = await Http.PutAsJsonAsync($"api/clients/{_editId}", payload);
             else
-                resp = await Http.PostAsJsonAsync("api/v1/clients/Create", payload);
+                resp = await Http.PostAsJsonAsync("api/clients", payload);
 
             if (resp.IsSuccessStatusCode)
             {
@@ -263,7 +263,7 @@ else
         _deleting = true;
         try
         {
-            var resp = await Http.DeleteAsync($"api/v1/clients/Delete/{_deleteTarget.Id}");
+            var resp = await Http.DeleteAsync($"api/clients/{_deleteTarget.Id}");
             if (resp.IsSuccessStatusCode)
             {
                 ShowAlert($"Client '{_deleteTarget.Name}' deleted.", "alert-success");

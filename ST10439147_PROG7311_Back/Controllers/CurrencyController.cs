@@ -2,90 +2,104 @@ using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE_Back.DTOs;
 using ST10439147_PRO7311_POE_Back.Services;
 
-// This controller provides endpoints for currency conversion using the ICurrencyConversionStrategy service.
-// It includes endpoints to get the list of supported currencies, retrieve exchange rates, and convert amounts between currencies.
-// The controller handles exceptions from the currency conversion service and returns appropriate HTTP status codes and messages.
-[ApiController]
-[Route("api/v1/[controller]")]
-public class CurrencyController : ControllerBase
+namespace ST10439147_PRO7311_POE_Back.Controllers
 {
-    private readonly ICurrencyConversionStrategy _fxStrategy;
-
-    public CurrencyController(ICurrencyConversionStrategy fxStrategy)
+    /// <summary>
+    /// Provides live currency exchange rates and conversion using the OpenExchangeRates API.
+    /// Rates are cached for 10 minutes to avoid excessive external API calls.
+    /// </summary>
+    [ApiController]
+    [Route("api/currency")]
+    [Produces("application/json")]
+    public class CurrencyController : ControllerBase
     {
-        _fxStrategy = fxStrategy;
-    }
+        private readonly ICurrencyConversionStrategy _fxStrategy;
 
-    // GET api/v1/currency/currencies
-    // Returns the list of all supported currency codes (e.g. ["AUD","EUR","GBP","USD","ZAR",...])
-    // If the list cannot be retrieved (e.g. API failure), returns a 503 status with an error message
-    [HttpGet("currencies")]
-    public async Task<ActionResult<List<string>>> GetCurrencies()
-    {
-        try
+        public CurrencyController(ICurrencyConversionStrategy fxStrategy)
         {
-            var currencies = await _fxStrategy.GetAvailableCurrencies();
-            return Ok(currencies);
+            _fxStrategy = fxStrategy;
         }
-        catch (CurrencyConversionException ex)
-        {
-            return StatusCode(503, new { Message = ex.Message });
-        }
-    }
 
-    // GET api/v1/currency/rate?from=USD&to=ZAR
-    // Returns the current exchange rate between any two currencies
-    // If the rate cannot be retrieved (e.g. API failure), returns a 503 status with an error message
-    // Example response: { "fromCurrency": "USD", "toCurrency": "ZAR", "rate": 18.5 }
-    [HttpGet("rate")]
-    public async Task<ActionResult<CurrencyRateDto>> GetRate(
-        [FromQuery] string from = "USD",
-        [FromQuery] string to = "ZAR")
-    {
-        try
+        /// <summary>
+        /// Returns the list of all supported currency codes (e.g. "AUD", "EUR", "USD", "ZAR").
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+        public async Task<ActionResult<List<string>>> GetCurrencies()
         {
-            var rate = await _fxStrategy.GetRate(from, to);
-            return Ok(new CurrencyRateDto
+            try
             {
-                Rate = rate,
-                FromCurrency = from.ToUpperInvariant(),
-                ToCurrency = to.ToUpperInvariant(),
-                FromAmount = 1,
-                ToAmount = rate
-            });
-        }
-        catch (CurrencyConversionException ex)
-        {
-            return StatusCode(503, new { Message = ex.Message });
-        }
-    }
-
-    // GET api/v1/currency/convert?amount=100&from=USD&to=ZAR
-    // Converts any amount between any two currencies (called live as user types)
-    // Returns the converted amount along with the exchange rate used for the conversion
-    // If the conversion cannot be performed (e.g. API failure), returns a 503 status with an error message
-    [HttpGet("convert")]
-    public async Task<ActionResult<CurrencyRateDto>> Convert(
-        [FromQuery] decimal amount,
-        [FromQuery] string from = "USD",
-        [FromQuery] string to = "ZAR")
-    {
-        try
-        {
-            var rate = await _fxStrategy.GetRate(from, to);
-            var converted = Math.Round(amount * rate, 2);
-            return Ok(new CurrencyRateDto
+                var currencies = await _fxStrategy.GetAvailableCurrencies();
+                return Ok(currencies);
+            }
+            catch (CurrencyConversionException ex)
             {
-                Rate = rate,
-                FromCurrency = from.ToUpperInvariant(),
-                ToCurrency = to.ToUpperInvariant(),
-                FromAmount = amount,
-                ToAmount = converted
-            });
+                return StatusCode(503, new { Message = ex.Message });
+            }
         }
-        catch (CurrencyConversionException ex)
+
+        /// <summary>
+        /// Returns the current exchange rate between two currencies.
+        /// </summary>
+        /// <param name="from">Source currency code (default: USD).</param>
+        /// <param name="to">Target currency code (default: ZAR).</param>
+        [HttpGet("rate")]
+        [ProducesResponseType(typeof(CurrencyRateDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+        public async Task<ActionResult<CurrencyRateDto>> GetRate(
+            [FromQuery] string from = "USD",
+            [FromQuery] string to = "ZAR")
         {
-            return StatusCode(503, new { Message = ex.Message });
+            try
+            {
+                var rate = await _fxStrategy.GetRate(from, to);
+                return Ok(new CurrencyRateDto
+                {
+                    Rate = rate,
+                    FromCurrency = from.ToUpperInvariant(),
+                    ToCurrency = to.ToUpperInvariant(),
+                    FromAmount = 1,
+                    ToAmount = rate
+                });
+            }
+            catch (CurrencyConversionException ex)
+            {
+                return StatusCode(503, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Converts an amount from one currency to another.
+        /// </summary>
+        /// <param name="amount">The amount to convert.</param>
+        /// <param name="from">Source currency code (default: USD).</param>
+        /// <param name="to">Target currency code (default: ZAR).</param>
+        [HttpGet("convert")]
+        [ProducesResponseType(typeof(CurrencyRateDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+        public async Task<ActionResult<CurrencyRateDto>> Convert(
+            [FromQuery] decimal amount,
+            [FromQuery] string from = "USD",
+            [FromQuery] string to = "ZAR")
+        {
+            try
+            {
+                var rate = await _fxStrategy.GetRate(from, to);
+                var converted = Math.Round(amount * rate, 2);
+                return Ok(new CurrencyRateDto
+                {
+                    Rate = rate,
+                    FromCurrency = from.ToUpperInvariant(),
+                    ToCurrency = to.ToUpperInvariant(),
+                    FromAmount = amount,
+                    ToAmount = converted
+                });
+            }
+            catch (CurrencyConversionException ex)
+            {
+                return StatusCode(503, new { Message = ex.Message });
+            }
         }
     }
 }

@@ -112,7 +112,7 @@
         try
         {
             var loginDto = new LoginDTO { UserName = _username, Password = _password };
-            var resp = await Http.PostAsJsonAsync("api/user/Login", loginDto);
+            var resp = await Http.PostAsJsonAsync("api/users/login", loginDto);
 
             if (resp.IsSuccessStatusCode)
             {

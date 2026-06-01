@@ -1,82 +1,91 @@
 using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE_Back.Extensions;
+using ST10439147_PRO7311_POE_Back.Models;
 using ST10439147_PRO7311_POE_Back.Services;
 
-// Represents an API controller that manages client resources, providing endpoints to retrieve, create, update, and delete clients.
-// This controller exposes RESTful endpoints for client management operations.
-// Access to certain actions, such as creating, updating, or deleting clients, may be restricted based on the user's role (e.g., manager
-// or admin). All endpoints are prefixed with 'api/v1/clients'.
-[ApiController]
-[Route("api/v1/[controller]")]
-[IgnoreAntiforgeryToken]
-public class ClientsController : ControllerBase
+namespace ST10439147_PRO7311_POE_Back.Controllers
 {
-    private readonly IClientService _clientService;
-
-    public ClientsController(IClientService clientService)
+    /// <summary>
+    /// Manages client resources. Managers and Admins can create and update clients;
+    /// only Admins can delete. All authenticated users may read.
+    /// </summary>
+    [ApiController]
+    [Route("api/clients")]
+    [IgnoreAntiforgeryToken]
+    [Produces("application/json")]
+    public class ClientsController : ControllerBase
     {
-        _clientService = clientService;
-    }
+        private readonly IClientService _clientService;
 
-    // GET api/v1/clients/All
-    // Retrieves a list of all clients. This endpoint is accessible to all authenticated users.
-    // Returns a 200 OK response containing the list of clients.
-    [HttpGet("All")]
-    public async Task<IActionResult> All()
-    {
-        var clients = await _clientService.GetAllClients();
-        return Ok(clients);
-    }
+        public ClientsController(IClientService clientService)
+        {
+            _clientService = clientService;
+        }
 
-    // GET api/v1/clients/Get/{id}
-    // Retrieves a specific client by its unique identifier. This endpoint is accessible to all authenticated users.
-    // If the client with the specified ID exists, returns a 200 OK response containing the client data; otherwise, returns a 404 Not Found response.
-    [HttpGet("Get/{id}")]
-    public async Task<IActionResult> Get(int id)
-    {
-        var client = await _clientService.GetClient(id);
-        return client == null ? NotFound() : Ok(client);
-    }
+        /// <summary>Returns all clients ordered by name.</summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(List<Clients>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAll()
+        {
+            var clients = await _clientService.GetAllClients();
+            return Ok(clients);
+        }
 
-    // POST api/v1/clients/Create
-    // Creates a new client resource. This endpoint is restricted to users with a manager role.
-    // Accepts a client object in the request body and attempts to create a new client. If the user does not have the required role, returns a 200 OK response with an access denied message; otherwise, returns a 200 OK response containing the result of the creation operation.
-    [HttpPost("Create")]
-    public async Task<IActionResult> Create([FromBody] ST10439147_PRO7311_POE_Back.Models.Clients client)
-    {
-        if (!this.IsManager())
-            return Ok(new { Message = "Access denied.", Status = false });
+        /// <summary>Returns a single client by ID.</summary>
+        /// <param name="id">The client ID.</param>
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(Clients), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var client = await _clientService.GetClient(id);
+            return client == null ? NotFound() : Ok(client);
+        }
 
-        var result = await _clientService.CreateClient(client);
-        return Ok(result);
-    }
+        /// <summary>Creates a new client. Requires Manager or Admin role.</summary>
+        /// <param name="client">Client data.</param>
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<IActionResult> Create([FromBody] Clients client)
+        {
+            if (!this.IsManager())
+                return Ok(new { Message = "Access denied – Managers and Admins only.", Status = false });
 
-    // PUT api/v1/clients/Update/{id}
-    // Updates an existing client resource identified by its unique identifier. This endpoint is restricted to users with a manager role.
-    // Accepts an updated client object in the request body and attempts to update the existing client. If the user does not have the required role, returns a 200 OK response with an access denied message; if the client with the specified ID does not exist, returns a 404 Not Found response; otherwise, returns a 200 OK response containing the result of the update operation.
-    [HttpPut("Update/{id}")]
-    public async Task<IActionResult> Update(
-        int id,
-        [FromBody] ST10439147_PRO7311_POE_Back  .Models.Clients updated)
-    {
-        if (!this.IsManager())
-            return Ok(new { Message = "Access denied.", Status = false });
+            var result = await _clientService.CreateClient(client);
+            return Ok(result);
+        }
 
-        var result = await _clientService.UpdateClient(id, updated);
-        return result.Status ? Ok(result) : NotFound(result);
-    }
+        /// <summary>Updates an existing client. Requires Manager or Admin role.</summary>
+        /// <param name="id">The client ID to update.</param>
+        /// <param name="updated">Updated client data.</param>
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Update(int id, [FromBody] Clients updated)
+        {
+            if (!this.IsManager())
+                return Ok(new { Message = "Access denied – Managers and Admins only.", Status = false });
 
-    // DELETE api/v1/clients/Delete/{id}
-    // Deletes an existing client resource identified by its unique identifier. This endpoint is restricted to users with an admin role.
-    // If the user does not have the required role, returns a 200 OK response with an access denied message; if the client with the specified ID does not exist, returns a 404 Not Found response; otherwise, returns a 200 OK response containing the result of the deletion operation.
-    [HttpDelete("Delete/{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        if (!this.IsAdmin())
-            return Ok(new { Message = "Access denied – Admins only.", Status = false });
+            var result = await _clientService.UpdateClient(id, updated);
+            return result.Status ? Ok(result) : NotFound(result);
+        }
 
-        var result = await _clientService.DeleteClient(id);
-        return result.Status ? Ok(result) : NotFound(result);
+        /// <summary>
+        /// Deletes a client. Requires Admin role.
+        /// All contracts must be in a terminal status and all service requests resolved first.
+        /// </summary>
+        /// <param name="id">The client ID to delete.</param>
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Delete(int id)
+        {
+            if (!this.IsAdmin())
+                return Ok(new { Message = "Access denied – Admins only.", Status = false });
+
+            var result = await _clientService.DeleteClient(id);
+            return result.Status ? Ok(result) : NotFound(result);
+        }
     }
 }
 //--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

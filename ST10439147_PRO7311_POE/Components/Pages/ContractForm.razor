@@ -408,7 +408,7 @@ else
 
     private async Task LoadClients()
     {
-        try { _clients = await Http.GetFromJsonAsync<List<ST10439147_PRO7311_POE.Models.Clients>>("api/v1/clients/All") ?? new(); }
+        try { _clients = await Http.GetFromJsonAsync<List<ST10439147_PRO7311_POE.Models.Clients>>("api/clients") ?? new(); }
         catch { ShowAlert("Could not load clients. Please ensure clients exist.", "alert-warning"); }
     }
 

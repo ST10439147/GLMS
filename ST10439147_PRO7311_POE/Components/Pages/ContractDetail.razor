@@ -296,7 +296,7 @@ else
     {
         try
         {
-            var dto = await Http.GetFromJsonAsync<CurrencyRateDto>("api/v1/currency/rate");
+            var dto = await Http.GetFromJsonAsync<CurrencyRateDto>("api/currency/rate");
             if (dto != null) _rate = dto.Rate;
         }
         catch { }

@@ -215,7 +215,7 @@ else
     private async Task Load()
     {
         _loading = true;
-        try { _users = await Http.GetFromJsonAsync<List<User>>("api/user/GetAllUsers") ?? new(); }
+        try { _users = await Http.GetFromJsonAsync<List<User>>("api/users") ?? new(); }
         catch { ShowAlert("Failed to load users.", "alert-danger"); }
         finally { _loading = false; }
     }
@@ -255,7 +255,11 @@ else
                 Password = _fPassword,
                 AccessLevel = _fAccessLevel
             };
-            var resp = await Http.PostAsJsonAsync($"api/user/CreateUpdate/{_editId}", payload);
+            HttpResponseMessage resp;
+            if (_editId > 0)
+                resp = await Http.PutAsJsonAsync($"api/users/{_editId}", payload);
+            else
+                resp = await Http.PostAsJsonAsync("api/users", payload);
             if (resp.IsSuccessStatusCode)
             {
                 _showForm = false;
@@ -276,7 +280,7 @@ else
         _deleting = true;
         try
         {
-            var resp = await Http.DeleteAsync($"api/user/DeleteUserRecord/{_deleteTarget.Id}");
+            var resp = await Http.DeleteAsync($"api/users/{_deleteTarget.Id}");
             if (resp.IsSuccessStatusCode)
             {
                 ShowAlert($"User '{_deleteTarget.UserName}' deleted.", "alert-success");
