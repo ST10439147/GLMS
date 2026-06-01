@@ -19,7 +19,6 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSignalR();
 builder.Services.AddScoped<UserState>();
 builder.Services.AddScoped<AccessLevelHandler>();
-builder.Services.AddScoped<NotificationService>();
 
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7055";
 
