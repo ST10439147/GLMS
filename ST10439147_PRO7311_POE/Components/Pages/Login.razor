@@ -1,6 +1,7 @@
 @page "/login"
 @using ST10439147_PRO7311_POE.Models
 @using ST10439147_PRO7311_POE.DTOs
+@using System.Text.Json
 @layout EmptyLayout
 @inject ProtectedSessionStorage SessionStorage
 @inject HttpClient Http
@@ -78,10 +79,13 @@
             _sessionChecked = true;
             try
             {
-                var result = await SessionStorage.GetAsync<User>("currentUser");
-                if (result.Success && result.Value != null)
+                var userResult = await SessionStorage.GetAsync<User>("currentUser");
+                var tokenResult = await SessionStorage.GetAsync<string>("jwtToken");
+                if (userResult.Success && userResult.Value != null)
                 {
-                    UserState.CurrentUser = result.Value;
+                    UserState.CurrentUser = userResult.Value;
+                    if (tokenResult.Success && !string.IsNullOrEmpty(tokenResult.Value))
+                        UserState.JwtToken = tokenResult.Value;
                     Nav.NavigateTo("/");
                 }
             }
@@ -112,14 +116,18 @@
         try
         {
             var loginDto = new LoginDTO { UserName = _username, Password = _password };
-            var resp = await Http.PostAsJsonAsync("api/users/login", loginDto);
+            var resp = await Http.PostAsJsonAsync("api/auth/login", loginDto);
 
             if (resp.IsSuccessStatusCode)
             {
-                var user = await resp.Content.ReadFromJsonAsync<User>();
+                var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+                var token = json.GetProperty("token").GetString() ?? string.Empty;
+                var user = json.GetProperty("user").Deserialize<User>();
                 if (user != null)
                 {
+                    UserState.JwtToken = token;
                     UserState.CurrentUser = user;
+                    await SessionStorage.SetAsync("jwtToken", token);
                     await SessionStorage.SetAsync("currentUser", user);
                     Nav.NavigateTo("/");
                     return;

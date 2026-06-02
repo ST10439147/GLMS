@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE_Back.Extensions;
 using ST10439147_PRO7311_POE_Back.Models;
@@ -11,6 +12,7 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
     /// </summary>
     [ApiController]
     [Route("api/clients")]
+    [Authorize]
     [IgnoreAntiforgeryToken]
     [Produces("application/json")]
     public class ClientsController : ControllerBase

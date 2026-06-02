@@ -10,6 +10,8 @@ namespace ST10439147_PRO7311_POE.Services
         // the moment the user logs in or out — no polling needed.
         public event Action? OnChange;
 
+        public string? JwtToken { get; set; }
+
         public User? CurrentUser
         {
             get => _currentUser;

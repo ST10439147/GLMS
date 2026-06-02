@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE_Back.DTOs;
 using ST10439147_PRO7311_POE_Back.Extensions;
@@ -13,6 +14,7 @@ namespace ST10439147_PRO7311_POE.Controllers
     /// </summary>
     [ApiController]
     [Route("api/contracts")]
+    [Authorize]
     [IgnoreAntiforgeryToken]
     [Produces("application/json")]
     public class ContractController : ControllerBase

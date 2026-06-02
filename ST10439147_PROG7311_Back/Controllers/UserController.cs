@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE_Back.DTOs;
 using ST10439147_PRO7311_POE_Back.Models;
@@ -13,6 +14,7 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
     /// </summary>
     [ApiController]
     [Route("api/users")]
+    [Authorize]
     [IgnoreAntiforgeryToken]
     [Produces("application/json")]
     public class UserController : ControllerBase
@@ -30,6 +32,7 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
         /// Authenticates a user and returns their profile including access level.
         /// </summary>
         /// <param name="loginDto">Username and password credentials.</param>
+        [AllowAnonymous]
         [HttpPost("login")]
         [DisableRequestSizeLimit]
         [ProducesResponseType(typeof(User), StatusCodes.Status200OK)]
