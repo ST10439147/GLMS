@@ -272,9 +272,8 @@ ServiceFabricBackup/
 
 # SQL Server files
 
-# Include the database files in the Data folder
-!**/Data/*.mdf
-!**/Data/*.ldf
+*.mdf
+*.ldf
 *.ndf
 
 # Business Intelligence projects

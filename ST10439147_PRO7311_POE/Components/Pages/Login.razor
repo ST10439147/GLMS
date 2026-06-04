@@ -122,7 +122,8 @@
             {
                 var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
                 var token = json.GetProperty("token").GetString() ?? string.Empty;
-                var user = json.GetProperty("user").Deserialize<User>();
+                var jsonOpts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var user = json.GetProperty("user").Deserialize<User>(jsonOpts);
                 if (user != null)
                 {
                     UserState.JwtToken = token;

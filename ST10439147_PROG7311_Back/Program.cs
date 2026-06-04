@@ -11,14 +11,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var dataFolder = Path.Combine(builder.Environment.ContentRootPath, "Data");
-Directory.CreateDirectory(dataFolder);
-var mdfPath = Path.Combine(dataFolder, "ST10439147_PRO7311_POE.mdf");
-var connectionString = $"Server=(localdb)\\mssqllocaldb;" +
-                       $"AttachDbFilename={mdfPath};" +
-                       $"Database=ST10439147_GLMS_DB;" +
-                       $"Integrated Security=True;" +
-                       $"MultipleActiveResultSets=true";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("DefaultConnection is not configured.");
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
@@ -108,6 +102,12 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 // Swagger available in all environments so the API is always testable
 app.UseSwagger();
