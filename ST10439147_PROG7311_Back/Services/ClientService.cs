@@ -70,6 +70,27 @@ namespace ST10439147_PRO7311_POE_Back.Services
             };
         }
 
+        // Applies only the non-null fields from the patch DTO, leaving everything else unchanged.
+        public async Task<ClientResponseDto> PatchClient(int id, PatchClientDto patch)
+        {
+            using var ctx = _dbFactory.CreateDbContext();
+            var existing = await ctx.Clients.FindAsync(id);
+            if (existing == null)
+                return new ClientResponseDto { Message = $"Client {id} not found.", Status = false };
+
+            if (patch.Name is not null) existing.Name = patch.Name;
+            if (patch.ContactDetails is not null) existing.ContactDetails = patch.ContactDetails;
+            if (patch.Region.HasValue) existing.Region = patch.Region.Value;
+
+            await ctx.SaveChangesAsync();
+            return new ClientResponseDto
+            {
+                Client = existing,
+                Message = $"Client '{existing.Name}' patched.",
+                Status = true
+            };
+        }
+
         // Deleting a client is complex due to the relationships with contracts and service requests.
         // Rules:
         //   1. A client can only be deleted when ALL contracts are in a terminal status:

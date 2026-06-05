@@ -1,0 +1,72 @@
+services:
+
+  # -- Container 1: SQL Server Database ------------------------------------------
+  sql-server-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql-server-db
+    environment:
+      SA_PASSWORD: "Yeshua73124@"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - glms-network
+    healthcheck:
+      test: ["CMD-SHELL",
+             "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Yeshua73124@ -Q 'SELECT 1' -No -C || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # -- Container 2: Backend Web API ----------------------------------------------
+  glms-backend-api:
+    build:
+      context: .
+      dockerfile: ST10439147_PROG7311_Back/Dockerfile
+    container_name: glms-backend-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__DefaultConnection: "Server=sql-server-db,1433;Database=ST10439147_GLMS_DB;User Id=sa;Password=Yeshua73124@;TrustServerCertificate=True;"
+      Jwt__Key: "y1rEFAPDiAV06rzrtFQ0xJBJRYy+RsdS5KUACFcAMUWPxjyVFi2lSA=="
+      Jwt__Issuer: "glms-backend-api"
+      Jwt__Audience: "glms-frontend-web"
+    ports:
+      - "5000:8080"
+    depends_on:
+      sql-server-db:
+        condition: service_healthy
+    networks:
+      - glms-network
+    restart: on-failure
+
+  # -- Container 3: Frontend Blazor MVC ------------------------------------------
+  glms-frontend-web:
+    build:
+      context: .
+      dockerfile: ST10439147_PRO7311_POE/Dockerfile
+    container_name: glms-frontend-web
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ApiBaseUrl: "http://glms-backend-api:8080"
+    ports:
+      - "5001:8080"
+    depends_on:
+      - glms-backend-api
+    networks:
+      - glms-network
+    restart: on-failure
+
+# -- Shared Network -------------------------------------------------------------
+networks:
+  glms-network:
+    driver: bridge
+
+# -- Named Volume (persists DB data across container restarts) ------------------
+volumes:
+  sqlserver_data:

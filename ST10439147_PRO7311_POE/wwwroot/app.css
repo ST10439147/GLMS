@@ -1,4 +1,4 @@
-/* ── Variables ─────────────────────────────────────────────── */
+/* -- Variables ----------------------------------------------- */
 :root {
     --primary: #1a3a5c;
     --primary-light: #2456861a;
@@ -15,7 +15,7 @@
     --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* ── Reset / Base ───────────────────────────────────────────── */
+/* -- Reset / Base --------------------------------------------- */
 *, *::before, *::after {
     box-sizing: border-box;
 }
@@ -38,7 +38,7 @@ a {
         text-decoration: underline;
     }
 
-/* ── Layout Shell ───────────────────────────────────────────── */
+/* -- Layout Shell --------------------------------------------- */
 .page {
     display: flex;
     min-height: 100vh;
@@ -97,7 +97,7 @@ article.content {
     max-width: 1400px;
 }
 
-/* ── Sidebar / Nav ──────────────────────────────────────────── */
+/* -- Sidebar / Nav -------------------------------------------- */
 .navbar-brand {
     display: flex;
     align-items: center;
@@ -180,7 +180,7 @@ article.content {
             background: rgba(220,53,69,.7);
         }
 
-/* ── Page Header ────────────────────────────────────────────── */
+/* -- Page Header ---------------------------------------------- */
 .page-header {
     display: flex;
     align-items: center;
@@ -203,7 +203,7 @@ article.content {
         font-size: .9rem;
     }
 
-/* ── Cards ──────────────────────────────────────────────────── */
+/* -- Cards ---------------------------------------------------- */
 .card {
     background: #fff;
     border: 1px solid #e2e6ea;
@@ -229,7 +229,7 @@ article.content {
     padding: 1.4rem;
 }
 
-/* ── Summary / Stat Cards ───────────────────────────────────── */
+/* -- Summary / Stat Cards ------------------------------------- */
 .stat-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -279,7 +279,7 @@ article.content {
         color: var(--danger);
     }
 
-/* ── Tables ─────────────────────────────────────────────────── */
+/* -- Tables --------------------------------------------------- */
 .table-wrapper {
     overflow-x: auto;
 }
@@ -314,7 +314,7 @@ tbody td {
     vertical-align: middle;
 }
 
-/* ── Badges / Status ─────────────────────────────────────────── */
+/* -- Badges / Status ------------------------------------------- */
 .badge {
     display: inline-block;
     padding: .28em .7em;
@@ -379,7 +379,7 @@ tbody td {
     color: #495057;
 }
 
-/* ── Forms ──────────────────────────────────────────────────── */
+/* -- Forms ---------------------------------------------------- */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -447,7 +447,7 @@ tbody td {
     flex-wrap: wrap;
 }
 
-/* ── Buttons ────────────────────────────────────────────────── */
+/* -- Buttons -------------------------------------------------- */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -552,7 +552,7 @@ tbody td {
     font-size: 1rem;
 }
 
-/* ── Alerts ─────────────────────────────────────────────────── */
+/* -- Alerts --------------------------------------------------- */
 .alert {
     padding: .85rem 1.2rem;
     border-radius: var(--radius);
@@ -587,7 +587,7 @@ tbody td {
     border: 1px solid #9eeaf9;
 }
 
-/* ── Filter / Search Bar ────────────────────────────────────── */
+/* -- Filter / Search Bar -------------------------------------- */
 .filter-bar {
     background: #fff;
     border: 1px solid #e2e6ea;
@@ -614,7 +614,7 @@ tbody td {
         color: #374151;
     }
 
-/* ── Login Page ─────────────────────────────────────────────── */
+/* -- Login Page ----------------------------------------------- */
 .login-page {
     min-height: 100vh;
     display: flex;
@@ -662,7 +662,7 @@ tbody td {
             margin: .3rem 0 0;
         }
 
-/* ── Notification Toast ─────────────────────────────────────── */
+/* -- Notification Toast --------------------------------------- */
 .notification-bar {
     position: fixed;
     bottom: 1.5rem;
@@ -699,7 +699,7 @@ tbody td {
     }
 }
 
-/* ── Detail Panels ───────────────────────────────────────────── */
+/* -- Detail Panels --------------------------------------------- */
 .detail-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -722,7 +722,7 @@ tbody td {
     font-weight: 500;
 }
 
-/* ── Empty State ─────────────────────────────────────────────── */
+/* -- Empty State ----------------------------------------------- */
 .empty-state {
     text-align: center;
     padding: 3rem 1rem;
@@ -745,7 +745,7 @@ tbody td {
         margin: 0;
     }
 
-/* ── Loading Spinner ─────────────────────────────────────────── */
+/* -- Loading Spinner ------------------------------------------- */
 .spinner {
     display: inline-block;
     width: 1.2rem;
@@ -768,7 +768,7 @@ tbody td {
     }
 }
 
-/* ── Confirm Modal ────────────────────────────────────────────── */
+/* -- Confirm Modal ---------------------------------------------- */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -805,7 +805,7 @@ tbody td {
     gap: .7rem;
 }
 
-/* ── Responsive ──────────────────────────────────────────────── */
+/* -- Responsive ------------------------------------------------ */
 @media (max-width: 768px) {
     .sidebar {
         width: 100%;
@@ -834,7 +834,7 @@ tbody td {
     }
 }
 
-/* ── Blazor error UI ─────────────────────────────────────────── */
+/* -- Blazor error UI ------------------------------------------- */
 #blazor-error-ui {
     background: #fff3cd;
     bottom: 0;

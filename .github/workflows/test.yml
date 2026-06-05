@@ -1,4 +1,4 @@
-name: Run Unit Tests
+name: CI
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   test:
+    name: Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -26,3 +27,29 @@ jobs:
 
     - name: Run Tests
       run: dotnet test --no-build --verbosity normal
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build backend image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ST10439147_PROG7311_Back/Dockerfile
+        push: false
+        tags: glms-backend-api:ci
+
+    - name: Build frontend image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ST10439147_PRO7311_POE/Dockerfile
+        push: false
+        tags: glms-frontend-web:ci

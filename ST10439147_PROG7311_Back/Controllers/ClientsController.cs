@@ -57,6 +57,21 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
             return Ok(result);
         }
 
+        /// <summary>Partially updates a client — only the supplied fields are changed. Requires Manager or Admin role.</summary>
+        /// <param name="id">The client ID to patch.</param>
+        /// <param name="patch">Fields to update. Omit any field to leave it unchanged.</param>
+        [HttpPatch("{id:int}")]
+        [ProducesResponseType(typeof(ClientResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Patch(int id, [FromBody] PatchClientDto patch)
+        {
+            if (!this.IsManager())
+                return Ok(new { Message = "Access denied – Managers and Admins only.", Status = false });
+
+            var result = await _clientService.PatchClient(id, patch);
+            return result.Status ? Ok(result) : NotFound(result);
+        }
+
         /// <summary>Updates an existing client. Requires Manager or Admin role.</summary>
         /// <param name="id">The client ID to update.</param>
         /// <param name="updated">Updated client data.</param>
