@@ -14,22 +14,30 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is not configured.");
 
+// Ref (IDbContextFactory): https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/
+// Ref (wrong scope pitfall): https://haacked.com/archive/2023/01/09/scoping-db-context-copy/
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 
 builder.Services.AddSignalR();
 builder.Services.AddScoped<LoginDTO>();
+// Ref (IHttpClientFactory avoids socket exhaustion): https://learn.microsoft.com/en-us/dotnet/core/extensions/httpclient-factory
+// Ref (why not new HttpClient()): https://www.stevejgordon.co.uk/httpclient-creation-and-disposal-internals-should-i-dispose-of-httpclient
 builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IFileService, FileService>();
+// Ref (strategy + DI): https://www.mytechramblings.com/posts/dotnet-strategy-pattern-using-dependency-injection/
+// Ref (DI with strategy pattern): https://dotnetfullstackdev.substack.com/p/leveraging-dependency-injection-with
 builder.Services.AddScoped<ICurrencyConversionStrategy, OpenExchangeStrategy>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key is not configured.");
 
+// Ref (JWT bearer setup): https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication
+// Ref (JWT Web API walkthrough): https://code-maze.com/authentication-aspnetcore-jwt-1/
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

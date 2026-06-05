@@ -329,7 +329,8 @@ else
                 Status = ServiceRequestStatus.Pending
             };
             var resp = await Http.PostAsJsonAsync("api/contracts/requests", payload);
-            if (resp.IsSuccessStatusCode)
+            var result = await resp.Content.ReadFromJsonAsync<ServiceRequestResponseDto>();
+            if (result?.Status == true)
             {
                 _srDescription = string.Empty; _srCostUsd = 0; _zarDisplay = "—"; _showSrForm = false;
                 _serviceRequests = await Http.GetFromJsonAsync<List<ServiceRequest>>(
@@ -338,8 +339,7 @@ else
             }
             else
             {
-                var err = await resp.Content.ReadFromJsonAsync<ContractResponseDto>();
-                _srError = err?.Message ?? "Submission failed.";
+                _srError = result?.Message ?? "Submission failed.";
             }
         }
         catch { _srError = "An error occurred."; }

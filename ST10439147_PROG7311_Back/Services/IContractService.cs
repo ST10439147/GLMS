@@ -18,7 +18,7 @@ namespace ST10439147_PRO7311_POE_Back.Services
         Task<ContractResponseDto?> DeleteContract(int id);
 
         // Search/Filter (LINQ - Rubric requirement)
-        Task<List<Contract>> SearchContracts(DateTime? startFrom, DateTime? startTo, ContractStatus? status);
+        Task<List<Contract>> SearchContracts(DateTime? startFrom, DateTime? endTo, ContractStatus? status);
 
         // File upload
         Task<ContractResponseDto> SaveSignedAgreement(int contractId, string filePath, string originalFileName);

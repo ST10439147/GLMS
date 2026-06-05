@@ -12,6 +12,7 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
     /// Listing all users requires Manager or Admin role.
     /// Note: full role-based auth will be expanded in Part 3.
     /// </summary>
+    // Ref (service layer pattern): https://learn.microsoft.com/en-us/aspnet/mvc/overview/older-versions-1/models-data/validating-with-a-service-layer-cs
     [ApiController]
     [Route("api/users")]
     [Authorize]
@@ -95,18 +96,18 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
         }
 
         /// <summary>
-        /// Updates an existing user record. Requires Admin role.
+        /// Partially updates a user — only the supplied fields are changed. Requires Admin role.
         /// </summary>
-        /// <param name="id">The user ID to update.</param>
-        /// <param name="user">Updated user data.</param>
-        [HttpPut("{id:int}")]
+        /// <param name="id">The user ID to patch.</param>
+        /// <param name="patch">Fields to update. Omit any field to leave it unchanged.</param>
+        [HttpPatch("{id:int}")]
         [ProducesResponseType(typeof(UserResponseDTO), StatusCodes.Status200OK)]
-        public async Task<IActionResult> Update(int id, [FromBody] User user)
+        public async Task<IActionResult> Patch(int id, [FromBody] PatchUserDto patch)
         {
             if (_loginDto.AccessLevel != (int)UserRole.Admin)
                 return Ok(DenyAccess("Only Admins can update users."));
 
-            var result = await _userService.CreateUpdate(user, id);
+            var result = await _userService.PatchUser(id, patch);
             return Ok(result);
         }
 

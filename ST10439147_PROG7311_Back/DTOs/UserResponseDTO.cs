@@ -12,5 +12,22 @@ namespace ST10439147_PRO7311_POE_Back.DTOs
         public string Message { get; set; } = string.Empty;
         public bool Status { get; set; } = false;
     }
+
+    /// <summary>Request body for PATCH /api/users/{id} — all fields optional.</summary>
+    public class PatchUserDto
+    {
+        /// <summary>New first name. Omit to keep the existing value.</summary>
+        public string? FirstName { get; set; }
+        /// <summary>New last name. Omit to keep the existing value.</summary>
+        public string? LastName { get; set; }
+        /// <summary>New username. Omit to keep the existing value.</summary>
+        public string? UserName { get; set; }
+        /// <summary>New email address. Omit to keep the existing value.</summary>
+        public string? Email { get; set; }
+        /// <summary>New password. Omit to keep the existing value.</summary>
+        public string? Password { get; set; }
+        /// <summary>New access level (1=Admin, 2=Manager, 3=Viewer). Omit to keep the existing value.</summary>
+        public int? AccessLevel { get; set; }
+    }
 }
 //--------------------------------------DDDDDoooooo End of File DDDDDoooooo--------------------------------------

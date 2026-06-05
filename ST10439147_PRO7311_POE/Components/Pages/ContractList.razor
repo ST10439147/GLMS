@@ -32,11 +32,11 @@ else
 
     <div class="filter-bar">
         <div class="filter-group">
-            <label>Start Date From</label>
+            <label>Start Date</label>
             <input type="date" class="form-control" @bind="_filterFrom" />
         </div>
         <div class="filter-group">
-            <label>Start Date To</label>
+            <label>End Date</label>
             <input type="date" class="form-control" @bind="_filterTo" />
         </div>
         <div class="filter-group">
@@ -202,7 +202,7 @@ else
         {
             var qs = new List<string>();
             if (_filterFrom.HasValue) qs.Add($"startFrom={_filterFrom.Value:yyyy-MM-dd}");
-            if (_filterTo.HasValue) qs.Add($"startTo={_filterTo.Value:yyyy-MM-dd}");
+            if (_filterTo.HasValue) qs.Add($"endTo={_filterTo.Value:yyyy-MM-dd}");
             if (!string.IsNullOrEmpty(_filterStatus)) qs.Add($"status={_filterStatus}");
             var url = "api/contracts" + (qs.Any() ? "?" + string.Join("&", qs) : "");
             _contracts = await Http.GetFromJsonAsync<List<Contract>>(url) ?? new();

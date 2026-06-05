@@ -40,6 +40,9 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
                 var user = await _userService.Login(loginDto);
                 if (user == null) return Unauthorized();
 
+                // Ref (JWT in ASP.NET Core): https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication
+                // Ref (JWT Web API walkthrough): https://code-maze.com/authentication-aspnetcore-jwt-1/
+                // Ref (HmacSha256, claims, token): https://www.dotnet4techies.com/2024/03/implementing-jwt-authentication-in.html
                 var key = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

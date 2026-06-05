@@ -109,8 +109,12 @@ else
                         }
                     </div>
                     <div class="form-group" style="grid-column:1/-1">
-                        <label>Contact Details</label>
+                        <label>Contact Details <span class="required">*</span></label>
                         <input class="form-control" @bind="_fContact" placeholder="e.g. John Smith – john@acme.com" />
+                        @if (_fSubmitted && string.IsNullOrWhiteSpace(_fContact))
+                        {
+                            <span class="validation-message">Enter Name - email.</span>
+                        }
                     </div>
                     <div class="form-group" style="grid-column:1/-1">
                         <label>Region <span class="required">*</span></label>
@@ -231,7 +235,7 @@ else
     private async Task SaveClient()
     {
         _fSubmitted = true;
-        if (string.IsNullOrWhiteSpace(_fName)) return;
+        if (string.IsNullOrWhiteSpace(_fName) || string.IsNullOrWhiteSpace(_fContact)) return;
 
         _formSaving = true;
         try
@@ -239,7 +243,7 @@ else
             var payload = new { Name = _fName, ContactDetails = _fContact, Region = _fRegion };
             System.Net.Http.HttpResponseMessage resp;
             if (_editId > 0)
-                resp = await Http.PutAsJsonAsync($"api/clients/{_editId}", payload);
+                resp = await Http.PatchAsJsonAsync($"api/clients/{_editId}", payload);
             else
                 resp = await Http.PostAsJsonAsync("api/clients", payload);
 

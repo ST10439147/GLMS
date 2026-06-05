@@ -11,6 +11,7 @@ namespace ST10439147_PRO7311_POE_Back.Services
         Task<UserResponseDTO> CreateUpdate(User user, int id);
         Task<UserResponseDTO?> GetUserRecord(int id);
         Task<List<User>> GetAllUsers();
+        Task<UserResponseDTO> PatchUser(int id, PatchUserDto patch);
         Task<UserResponseDTO?> DeleteUserRecord(int id);
     }
 }

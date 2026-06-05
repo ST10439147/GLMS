@@ -4,6 +4,9 @@ namespace ST10439147_PRO7311_POE_Back.Services
     // This allows us to easily switch between different FX providers by implementing the same interface.
     // ICurrencyConversionStrategy allows switching FX providers via one
     // Program.cs line change. FinancialService never changes.
+    // Ref (strategy + DI): https://www.mytechramblings.com/posts/dotnet-strategy-pattern-using-dependency-injection/
+    // Ref (DI with strategy pattern): https://dotnetfullstackdev.substack.com/p/leveraging-dependency-injection-with
+    // Ref (strategy pattern 2024): https://lindseybroos.be/blog/2024/strategy-pattern/
 
     public interface ICurrencyConversionStrategy
     {
@@ -26,6 +29,9 @@ namespace ST10439147_PRO7311_POE_Back.Services
     // OpenExchangeRates.org is a popular FX API with a free tier that doesn't require an API key. It provides exchange rates relative to USD, so we convert via USD as the base currency.
     public class OpenExchangeStrategy : ICurrencyConversionStrategy
     {
+        // Ref (IHttpClientFactory avoids socket exhaustion): https://learn.microsoft.com/en-us/dotnet/core/extensions/httpclient-factory
+        // Ref (why not new HttpClient()): https://www.stevejgordon.co.uk/httpclient-creation-and-disposal-internals-should-i-dispose-of-httpclient
+        // Ref (IHttpClientFactory vs HttpClient): https://www.c-sharpcorner.com/article/httpclientfactory-vs-httpclient-to-implement-api-calls/
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _config;
         private readonly ILogger<OpenExchangeStrategy> _logger;

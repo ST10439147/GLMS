@@ -9,7 +9,12 @@ namespace ST10439147_PRO7311_POE_Back.Services
 {
     public class UserService : IUserService
     {
+        // Ref (IDbContextFactory): https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/
+        // Ref (wrong scope pitfall): https://haacked.com/archive/2023/01/09/scoping-db-context-copy/
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
+
+        // Ref (SignalR IHubContext): https://learn.microsoft.com/en-us/aspnet/core/signalr/hubcontext
+        // Ref (real-time from background service): https://medium.com/@nerding_it/pushing-real-time-messages-from-background-service-in-asp-net-core-using-signalr-66d724f22d59
         private readonly IHubContext<NotificationHub> _hubContext;
 
         public UserService(
@@ -85,6 +90,37 @@ namespace ST10439147_PRO7311_POE_Back.Services
                 response.Status = false;
                 response.Message = $"User not found – Id: {id}";
             }
+
+            await Notify(response.Message);
+            return response;
+        }
+
+        // Applies only the non-null fields from the patch DTO, leaving everything else unchanged.
+        public async Task<UserResponseDTO> PatchUser(int id, PatchUserDto patch)
+        {
+            using var context = _dbFactory.CreateDbContext();
+            var existing = await context.ApplicationUsers.FindAsync(id);
+            var response = new UserResponseDTO();
+
+            if (existing == null)
+            {
+                response.Status = false;
+                response.Message = $"User not found – Id: {id}";
+                return response;
+            }
+
+            if (patch.FirstName is not null) existing.FirstName = patch.FirstName;
+            if (patch.LastName is not null) existing.LastName = patch.LastName;
+            if (patch.UserName is not null) existing.UserName = patch.UserName;
+            if (patch.Email is not null) existing.Email = patch.Email;
+            if (patch.Password is not null) existing.Password = patch.Password;
+            if (patch.AccessLevel.HasValue) existing.AccessLevel = patch.AccessLevel.Value;
+
+            await context.SaveChangesAsync();
+
+            response.User = existing;
+            response.Status = true;
+            response.Message = $"User patched: {existing.UserName} | Role: {existing.Role}";
 
             await Notify(response.Message);
             return response;

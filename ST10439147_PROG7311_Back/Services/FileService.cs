@@ -9,6 +9,9 @@ namespace ST10439147_PRO7311_POE_Back.Services
 
         // PDF magic bytes: every valid PDF file starts with "%PDF"
         // This is a simple check to prevent non-PDF files from being uploaded with a .pdf extension.
+        // Ref (magic bytes validation): https://code-maze.com/aspnetcore-how-to-validate-file-upload-extensions/
+        // Ref (magic number concept): https://www.aspsnippets.com/questions/291996/Validate-file-extension-with-magic-number-using-C-and-VBNet-in-ASPNet/
+        // Ref (MS Q&A on magic check): https://learn.microsoft.com/en-us/answers/questions/726816/check-a-valid-file-using-magic-check
         private static readonly byte[] PdfMagicBytes = { 0x25, 0x50, 0x44, 0x46 }; // %PDF
 
         public FileService(IWebHostEnvironment env, ILogger<FileService> logger)

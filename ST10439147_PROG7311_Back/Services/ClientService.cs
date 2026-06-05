@@ -9,6 +9,8 @@ namespace ST10439147_PRO7311_POE_Back.Services
     // The controller should call this service for all client-related operations, and the service will handle the underlying logic.
     public class ClientService : IClientService
     {
+        // Ref (IDbContextFactory): https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/
+        // Ref (wrong scope pitfall): https://haacked.com/archive/2023/01/09/scoping-db-context-copy/
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
         public ClientService(IDbContextFactory<AppDbContext> dbFactory)
@@ -46,26 +48,23 @@ namespace ST10439147_PRO7311_POE_Back.Services
             };
         }
 
-        // Updates an existing client. The service layer checks if the client exists before updating and returns a consistent response object.
-        // The controller can then use this response to generate the appropriate HTTP response.
-        public async Task<ClientResponseDto> UpdateClient(int id, Clients updated)
+        // Applies only the non-null fields from the patch DTO, leaving everything else unchanged.
+        public async Task<ClientResponseDto> PatchClient(int id, PatchClientDto patch)
         {
-            // Only updating the client's basic details (name, contact, region) for simplicity.
-            // Contracts and service requests are not updated here, but could be handled in their own services.
             using var ctx = _dbFactory.CreateDbContext();
             var existing = await ctx.Clients.FindAsync(id);
             if (existing == null)
                 return new ClientResponseDto { Message = $"Client {id} not found.", Status = false };
 
-            existing.Name = updated.Name;
-            existing.ContactDetails = updated.ContactDetails;
-            existing.Region = updated.Region;
-            await ctx.SaveChangesAsync();
+            if (patch.Name is not null) existing.Name = patch.Name;
+            if (patch.ContactDetails is not null) existing.ContactDetails = patch.ContactDetails;
+            if (patch.Region.HasValue) existing.Region = patch.Region.Value;
 
+            await ctx.SaveChangesAsync();
             return new ClientResponseDto
             {
                 Client = existing,
-                Message = $"Client '{existing.Name}' updated.",
+                Message = $"Client '{existing.Name}' patched.",
                 Status = true
             };
         }
@@ -137,6 +136,9 @@ namespace ST10439147_PRO7311_POE_Back.Services
 
             // Explicitly delete in leaf-first order:
             // ServiceRequests → Contracts → Client
+            // Ref (cascade delete & non-nullable FK): https://learn.microsoft.com/en-us/ef/core/saving/cascade-delete
+            // Ref (ClientSetNull throws on required FK): https://github.com/dotnet/efcore/issues/9935
+            // Ref (RemoveRange pattern): https://www.softwaremeadows.com/posts/entity_framework_6_child_deletion_and_foreign_keys_string_int_guid/
             var allServiceRequests = client.Contracts
                 .SelectMany(c => c.ServiceRequests)
                 .ToList();

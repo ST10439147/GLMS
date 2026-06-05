@@ -257,7 +257,7 @@ else
             };
             HttpResponseMessage resp;
             if (_editId > 0)
-                resp = await Http.PutAsJsonAsync($"api/users/{_editId}", payload);
+                resp = await Http.PatchAsJsonAsync($"api/users/{_editId}", payload);
             else
                 resp = await Http.PostAsJsonAsync("api/users", payload);
             if (resp.IsSuccessStatusCode)
