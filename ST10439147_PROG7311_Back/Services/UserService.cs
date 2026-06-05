@@ -90,6 +90,37 @@ namespace ST10439147_PRO7311_POE_Back.Services
             return response;
         }
 
+        // Applies only the non-null fields from the patch DTO, leaving everything else unchanged.
+        public async Task<UserResponseDTO> PatchUser(int id, PatchUserDto patch)
+        {
+            using var context = _dbFactory.CreateDbContext();
+            var existing = await context.ApplicationUsers.FindAsync(id);
+            var response = new UserResponseDTO();
+
+            if (existing == null)
+            {
+                response.Status = false;
+                response.Message = $"User not found – Id: {id}";
+                return response;
+            }
+
+            if (patch.FirstName is not null) existing.FirstName = patch.FirstName;
+            if (patch.LastName is not null) existing.LastName = patch.LastName;
+            if (patch.UserName is not null) existing.UserName = patch.UserName;
+            if (patch.Email is not null) existing.Email = patch.Email;
+            if (patch.Password is not null) existing.Password = patch.Password;
+            if (patch.AccessLevel.HasValue) existing.AccessLevel = patch.AccessLevel.Value;
+
+            await context.SaveChangesAsync();
+
+            response.User = existing;
+            response.Status = true;
+            response.Message = $"User patched: {existing.UserName} | Role: {existing.Role}";
+
+            await Notify(response.Message);
+            return response;
+        }
+
         // Retrieves a list of all users from the database, ordered by their user names.
         public async Task<List<User>> GetAllUsers()
         {

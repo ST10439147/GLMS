@@ -95,6 +95,22 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
         }
 
         /// <summary>
+        /// Partially updates a user — only the supplied fields are changed. Requires Admin role.
+        /// </summary>
+        /// <param name="id">The user ID to patch.</param>
+        /// <param name="patch">Fields to update. Omit any field to leave it unchanged.</param>
+        [HttpPatch("{id:int}")]
+        [ProducesResponseType(typeof(UserResponseDTO), StatusCodes.Status200OK)]
+        public async Task<IActionResult> Patch(int id, [FromBody] PatchUserDto patch)
+        {
+            if (_loginDto.AccessLevel != (int)UserRole.Admin)
+                return Ok(DenyAccess("Only Admins can update users."));
+
+            var result = await _userService.PatchUser(id, patch);
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Updates an existing user record. Requires Admin role.
         /// </summary>
         /// <param name="id">The user ID to update.</param>
