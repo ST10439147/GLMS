@@ -1,0 +1,16 @@
+# File location: .dockerignore  (C:\3rdYear\PROG7311\POE\prog7311-poe-part2-ST10439147) 
+# Build output 
+**/bin/ 
+**/obj/ 
+# Visual Studio files 
+**/.vs/ 
+**/*.user 
+# Git 
+.git/ 
+.gitignore 
+# Database files 
+*.mdf 
+*.ldf 
+# Secrets (never include in an image) 
+**/secrets.json 
+**/appsettings.Development.json

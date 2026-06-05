@@ -123,7 +123,7 @@ else
                     }
                 </div>
 
-                @* ── Signed Agreement drag-and-drop zone ── *@
+                @* -- Signed Agreement drag-and-drop zone -- *@
                 <div style="margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid #e2e6ea">
                     <h6 style="margin:0 0 .8rem;color:var(--primary)">📎 Signed Agreement (PDF only)</h6>
 
@@ -194,7 +194,7 @@ else
     }
 }
 
-@* ── Scoped styles ── *@
+@* -- Scoped styles -- *@
 <style>
     .pdf-drop-zone {
         position: relative;
@@ -277,7 +277,7 @@ else
         }
 </style>
 
-@* ── Drop-zone JS (runs once after render) ── *@
+@* -- Drop-zone JS (runs once after render) -- *@
 <script>
     window._pdfDropZoneReady = false;
 
@@ -393,7 +393,7 @@ else
         }
     }
 
-    // ── File picker button (browse link inside the zone) ──
+    // -- File picker button (browse link inside the zone) --
     private async Task OpenFilePicker()
     {
         await JS.InvokeVoidAsync("eval", "document.getElementById('pdfFileInput').click()");

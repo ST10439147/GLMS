@@ -95,7 +95,12 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("BlazorClient", policy =>
-        policy.WithOrigins("https://localhost:7181")
+    // Supports both Local and Docker-based frontends by allowing multiple origins
+        policy.WithOrigins(
+            "https://localhost:7181",     // local dev 
+            "http://localhost:5001",      // Docker host mapping 
+            "http://glms-frontend-web"    // Docker internal service name
+            )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());

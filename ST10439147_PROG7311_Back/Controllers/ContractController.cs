@@ -31,7 +31,7 @@ namespace ST10439147_PRO7311_POE.Controllers
         private static ContractResponseDto Deny(string message) =>
             new() { Message = message, Status = false };
 
-        // ── Contracts ────────────────────────────────────────────────────────────
+        // -- Contracts ------------------------------------------------------------
 
         /// <summary>
         /// Returns all contracts, with optional filtering by start-date range and/or status.
@@ -129,7 +129,7 @@ namespace ST10439147_PRO7311_POE.Controllers
             return result == null ? NotFound() : Ok(result);
         }
 
-        // ── Signed Agreements ────────────────────────────────────────────────────
+        // -- Signed Agreements ----------------------------------------------------
 
         /// <summary>
         /// Uploads a signed PDF agreement and associates it with the contract.
@@ -184,7 +184,7 @@ namespace ST10439147_PRO7311_POE.Controllers
                 result.Contract.SignedAgreementFileName ?? "agreement.pdf");
         }
 
-        // ── Service Requests ─────────────────────────────────────────────────────
+        // -- Service Requests -----------------------------------------------------
 
         /// <summary>Returns all service requests for the given contract.</summary>
         /// <param name="contractId">The contract ID.</param>
