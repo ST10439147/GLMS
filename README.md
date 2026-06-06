@@ -8,6 +8,7 @@ A full-stack logistics management platform built with a Blazor Server frontend a
 ## Table of Contents
 
 - [Overview](#overview)
+- [Login Credentials](#login-details)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -34,6 +35,12 @@ GLMS provides logistics staff with an interface to manage:
 - **Service Requests** – Requests tied to contracts
 - **Users** – Internal accounts with role-based access control (Admin, Manager, Viewer)
 - **Currency Conversion** – Live foreign exchange rates via the OpenExchangeRates API with 10-minute caching
+
+---
+
+## Login Details
+- UserName : admin
+- Password: Admin123@
 
 ---
 

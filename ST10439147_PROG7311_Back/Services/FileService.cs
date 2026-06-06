@@ -39,28 +39,29 @@ namespace ST10439147_PRO7311_POE_Back.Services
                 throw new InvalidOperationException(
                     $"Invalid file type '{extension}'. Only .pdf files are allowed.");
 
-            var peekStream = file.OpenReadStream();
+            using var inputStream = file.OpenReadStream();
             var header = new byte[4];
             // Read the first 4 bytes to check for the PDF magic number.
-            var bytesRead = await peekStream.ReadAsync(header, 0, 4);
+            var bytesRead = await inputStream.ReadAsync(header, 0, 4);
             if (bytesRead < 4 || !header.SequenceEqual(PdfMagicBytes))
                 throw new InvalidOperationException(
                     "The uploaded file is not a valid PDF.");
 
-            // Reset to the beginning so CopyToAsync copies the complete file.
-            if (peekStream.CanSeek)
-                peekStream.Position = 0;
-
-            // Save the file to wwwroot/uploads/agreements with a unique name to prevent collisions.
-            var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "agreements");
+            // Save the file to uploads/agreements with a unique name to prevent collisions.
+            // WebRootPath is null when no wwwroot folder exists (API-only host), so fall back to ContentRootPath.
+            var rootPath = _env.WebRootPath ?? _env.ContentRootPath;
+            var uploadsFolder = Path.Combine(rootPath, "uploads", "agreements");
             Directory.CreateDirectory(uploadsFolder);
 
             var uniqueFileName = $"{Guid.NewGuid()}{extension}";
             var fullPath = Path.Combine(uploadsFolder, uniqueFileName);
 
-            using (var stream = new FileStream(fullPath, FileMode.Create))
+            using (var outputStream = new FileStream(fullPath, FileMode.Create))
             {
-                await peekStream.CopyToAsync(stream);
+                // Write the magic bytes we already read, then stream the remainder.
+                // This works regardless of whether the source stream is seekable.
+                await outputStream.WriteAsync(header, 0, bytesRead);
+                await inputStream.CopyToAsync(outputStream);
             }
 
             _logger.LogInformation("Saved signed agreement: {FileName} → {Path}",
@@ -73,7 +74,8 @@ namespace ST10439147_PRO7311_POE_Back.Services
         // Given a stored relative path (e.g. "uploads/agreements/abc123.pdf"), return the absolute file path if it exists, or null if the file is missing.
         public string? GetFilePath(string storedPath)
         {
-            var fullPath = Path.Combine(_env.WebRootPath, storedPath);
+            var rootPath = _env.WebRootPath ?? _env.ContentRootPath;
+            var fullPath = Path.Combine(rootPath, storedPath);
             return File.Exists(fullPath) ? fullPath : null;
         }
     }

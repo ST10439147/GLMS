@@ -157,7 +157,7 @@ else
                             <div class="drop-zone-content">
                                 <span class="drop-icon">@(_isDragOver ? "📂" : "📄")</span>
                                 <p class="drop-primary">@(_isDragOver ? "Release to upload" : "Drag & drop your PDF here")</p>
-                                <p class="drop-secondary">or <button type="button" class="link-btn" @onclick="OpenFilePicker">browse files</button></p>
+                                <p class="drop-secondary">or <button type="button" class="link-btn" data-browse>browse files</button></p>
                                 <p class="drop-hint">PDF only · max 10 MB</p>
                             </div>
                         }
@@ -277,19 +277,25 @@ else
 
 @* -- Drop-zone JS (runs once after render) -- *@
 <script>
-    window._pdfDropZoneReady = false;
-
     window.initPdfDropZone = function () {
-        if (window._pdfDropZoneReady) return;
-
         const zone  = document.getElementById('pdfDropZone');
         const input = document.getElementById('pdfFileInput');
-        if (!zone || !input) return;
+        if (!zone || !input || zone.dataset.dzInit === '1') return;
 
-        // Clicking the zone (but not the link-btn buttons inside it) opens the picker
+        // Clicking the zone opens the picker; link-btn clicks are handled separately below.
         zone.addEventListener('click', function (e) {
-            if (e.target.classList.contains('link-btn')) return;
+            if (e.target.closest('.link-btn')) return;
             input.click();
+        });
+
+        // Handle the browse-files link synchronously in JS so the file dialog opens
+        // even in Blazor Server (where @@onclick goes through a SignalR round-trip that
+        // can break the browser's user-gesture requirement for file input .click()).
+        zone.querySelectorAll('.link-btn[data-browse]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                input.click();
+            });
         });
 
         // Drag visual feedback
@@ -327,7 +333,7 @@ else
             }
         });
 
-        window._pdfDropZoneReady = true;
+        zone.dataset.dzInit = '1';
     };
 </script>
 
@@ -389,12 +395,6 @@ else
         {
             await JS.InvokeVoidAsync("initPdfDropZone");
         }
-    }
-
-    // -- File picker button (browse link inside the zone) --
-    private async Task OpenFilePicker()
-    {
-        await JS.InvokeVoidAsync("eval", "document.getElementById('pdfFileInput').click()");
     }
 
     private void ClearFile()
@@ -500,8 +500,26 @@ else
                 var stream = _selectedFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                 content.Add(new StreamContent(stream), "file", _selectedFile.Name);
                 var uploadResp = await Http.PostAsync($"api/contracts/{contractId}/agreement", content);
+
                 if (!uploadResp.IsSuccessStatusCode)
-                    ShowAlert("Contract saved, but PDF upload failed. You can retry from the detail page.", "alert-warning");
+                {
+                    // Try to surface the actual error message from the response body.
+                    string detail = string.Empty;
+                    try
+                    {
+                        var errDto = await uploadResp.Content.ReadFromJsonAsync<ContractResponseDto>();
+                        detail = errDto?.Message ?? string.Empty;
+                    }
+                    catch { /* ignore parse errors */ }
+
+                    var msg = string.IsNullOrEmpty(detail)
+                        ? "Contract saved, but the PDF upload failed. Please try uploading the file again."
+                        : $"Contract saved, but the PDF upload failed: {detail}";
+
+                    ShowAlert(msg, "alert-warning");
+                    // Stay on the form so the user can read the error and retry.
+                    return;
+                }
             }
 
             Nav.NavigateTo($"/contracts/{contractId}");

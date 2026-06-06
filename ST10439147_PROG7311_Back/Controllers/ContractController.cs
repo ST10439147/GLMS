@@ -153,11 +153,22 @@ namespace ST10439147_PRO7311_POE.Controllers
             {
                 var savedPath = await _fileService.SaveSignedAgreement(file);
                 var result = await _contractService.SaveSignedAgreement(contractId, savedPath, file.FileName);
+                // Return 400 if the DB update failed (e.g. contract not found), so the
+                // frontend's IsSuccessStatusCode check actually catches the failure.
+                if (!result.Status)
+                    return BadRequest(result);
                 return Ok(result);
             }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new ContractResponseDto { Message = ex.Message, Status = false });
+            }
+            catch (Exception ex)
+            {
+                // Catch any unexpected exception (IO errors, DB errors, etc.) so the
+                // caller gets a proper 500 instead of an unhandled-exception response.
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new ContractResponseDto { Message = $"Upload failed: {ex.Message}", Status = false });
             }
         }
 

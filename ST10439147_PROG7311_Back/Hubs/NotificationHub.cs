@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using ST10439147_PRO7311_POE_Back.Models;
 
 namespace ST10439147_PRO7311_POE_Back.Hubs
