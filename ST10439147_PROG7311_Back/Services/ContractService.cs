@@ -207,6 +207,9 @@ namespace ST10439147_PRO7311_POE_Back.Services
             if (contract.EndDate < DateTime.UtcNow)
                 return ContractStatus.Expired;
 
+            if (string.IsNullOrEmpty(contract.SignedAgreementPath))
+                return ContractStatus.Draft;
+
             return contract.Status;
         }
 

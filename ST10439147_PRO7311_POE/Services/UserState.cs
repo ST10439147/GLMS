@@ -1,5 +1,5 @@
 using ST10439147_PRO7311_POE.Models;
-
+// Ref S. Peyrott and S. E. Peyrott, ‘JWT HANDBOOK The JWT Handbook’, 2024.
 namespace ST10439147_PRO7311_POE.Services
 {
     public class UserState

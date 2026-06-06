@@ -7,6 +7,7 @@ using ST10439147_PRO7311_POE_Back.Models;
 
 namespace ST10439147_PRO7311_POE_Back.Services
 {
+    // Ref S. Peyrott and S. E. Peyrott, ‘JWT HANDBOOK The JWT Handbook’, 2024.
     public class UserService : IUserService
     {
         // Ref (IDbContextFactory): https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/
