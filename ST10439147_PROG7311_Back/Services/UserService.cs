@@ -7,9 +7,15 @@ using ST10439147_PRO7311_POE_Back.Models;
 
 namespace ST10439147_PRO7311_POE_Back.Services
 {
+    // Ref S. Peyrott and S. E. Peyrott, ‘JWT HANDBOOK The JWT Handbook’, 2024.
     public class UserService : IUserService
     {
+        // Ref (IDbContextFactory): https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/
+        // Ref (wrong scope pitfall): https://haacked.com/archive/2023/01/09/scoping-db-context-copy/
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
+
+        // Ref (SignalR IHubContext): https://learn.microsoft.com/en-us/aspnet/core/signalr/hubcontext
+        // Ref (real-time from background service): https://medium.com/@nerding_it/pushing-real-time-messages-from-background-service-in-asp-net-core-using-signalr-66d724f22d59
         private readonly IHubContext<NotificationHub> _hubContext;
 
         public UserService(

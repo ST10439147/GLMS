@@ -7,8 +7,7 @@ namespace ST10439147_PRO7311_POE_Back.Services
         Task<List<Clients>> GetAllClients();
         Task<Clients?> GetClient(int id);
         Task<ClientResponseDto> CreateClient(Clients client);
-        Task<ClientResponseDto> UpdateClient(int id, Clients updated);
-        Task<ClientResponseDto> PatchClient(int id, PatchClientDto patch);
+Task<ClientResponseDto> PatchClient(int id, PatchClientDto patch);
         Task<ClientResponseDto> DeleteClient(int id);
     }
 

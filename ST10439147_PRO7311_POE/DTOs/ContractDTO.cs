@@ -9,6 +9,13 @@ namespace ST10439147_PRO7311_POE.DTOs
         public bool Status { get; set; } = false;
     }
 
+    public class ServiceRequestResponseDto
+    {
+        public ServiceRequest? ServiceRequest { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public bool Status { get; set; } = false;
+    }
+
     public class CurrencyRateDto
     {
         public decimal Rate { get; set; }

@@ -12,7 +12,12 @@ namespace ST10439147_PRO7311_POE_Back.Services
     // It also includes functionality to search for contracts based on specific criteria and to save signed agreements.
     public class ContractService : IContractService
     {
+        // Ref (SignalR IHubContext): https://learn.microsoft.com/en-us/aspnet/core/signalr/hubcontext
+        // Ref (SignalR from service): https://codeopinion.com/practical-asp-net-core-hubcontext/
         private readonly IHubContext<NotificationHub> _hubContext;
+
+        // Ref (IDbContextFactory): https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/
+        // Ref (wrong scope pitfall): https://haacked.com/archive/2023/01/09/scoping-db-context-copy/
         private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
         public ContractService(
@@ -28,6 +33,12 @@ namespace ST10439147_PRO7311_POE_Back.Services
         // The method returns a response object containing the created contract, a success status, and a message confirming the creation.
         public async Task<ContractResponseDto> CreateContract(Contract contract)
         {
+            if (contract.StartDate.Date < DateTime.UtcNow.Date)
+                return new ContractResponseDto { Message = "Start date cannot be in the past.", Status = false };
+
+            if (contract.EndDate <= contract.StartDate)
+                return new ContractResponseDto { Message = "End date must be after start date.", Status = false };
+
             using var ctx = _dbFactory.CreateDbContext();
             contract.Status = ContractStatus.Draft;
             ctx.Contracts.Add(contract);
@@ -83,6 +94,9 @@ namespace ST10439147_PRO7311_POE_Back.Services
         // If the contract is not found, it returns a response object with a failure status and a message indicating that the contract was not found.
         public async Task<ContractResponseDto> UpdateContract(int id, Contract updated)
         {
+            if (updated.EndDate <= updated.StartDate)
+                return new ContractResponseDto { Message = "End date must be after start date.", Status = false };
+
             using var ctx = _dbFactory.CreateDbContext();
             var existing = await ctx.Contracts.FindAsync(id);
             if (existing == null)
@@ -172,6 +186,8 @@ namespace ST10439147_PRO7311_POE_Back.Services
             // Explicitly remove child service requests before removing the contract.
             // This is required because the FK on ServiceRequest.ContractId is non-nullable,
             // so EF Core cannot orphan them — it must delete them or throw.
+            // Ref (cascade delete & non-nullable FK): https://learn.microsoft.com/en-us/ef/core/saving/cascade-delete
+            // Ref (ClientSetNull throws on required FK): https://github.com/dotnet/efcore/issues/9935
             ctx.ServiceRequests.RemoveRange(contract.ServiceRequests);
             ctx.Contracts.Remove(contract);
             await ctx.SaveChangesAsync();
@@ -219,15 +235,15 @@ namespace ST10439147_PRO7311_POE_Back.Services
         // If status is specified, it filters for contracts that match the given status.
         // The resulting list of contracts is ordered by StartDate and returned as a response.
         public async Task<List<Contract>> SearchContracts(
-    DateTime? startFrom, DateTime? startTo, ContractStatus? status)
+            DateTime? startFrom, DateTime? endTo, ContractStatus? status)
         {
             using var ctx = _dbFactory.CreateDbContext();
             IQueryable<Contract> query = ctx.Contracts.Include(c => c.Client);
 
             if (startFrom.HasValue)
                 query = query.Where(c => c.StartDate >= startFrom.Value);
-            if (startTo.HasValue)
-                query = query.Where(c => c.StartDate <= startTo.Value);
+            if (endTo.HasValue)
+                query = query.Where(c => c.EndDate <= endTo.Value);
             if (status.HasValue)
                 query = query.Where(c => c.Status == status.Value);
 
@@ -286,7 +302,7 @@ namespace ST10439147_PRO7311_POE_Back.Services
                     Status = false
                 };
 
-            if (contract.Status == ContractStatus.Expired || contract.Status == ContractStatus.OnHold)
+            if (contract.Status != ContractStatus.Active)
                 return new ServiceRequestResponseDto
                 {
                     Message = $"Cannot create service request: contract is '{contract.Status}'. " +
@@ -384,7 +400,9 @@ namespace ST10439147_PRO7311_POE_Back.Services
 
         // SignalR broadcast (Observer pattern)
         // This method sends a notification message to all connected clients using SignalR.
-        // The notification includes a message describing the event, the ID of the contract associated with the event, and the current status of that contract. 
+        // The notification includes a message describing the event, the ID of the contract associated with the event, and the current status of that contract.
+        // Ref (Clients.All.SendAsync): https://learn.microsoft.com/en-us/aspnet/core/signalr/hubcontext
+        // Ref (calling SignalR from controller/service): https://code-maze.com/aspnetcore-call-signalr-from-controller/
         private async Task Notify(string message, int contractId, ContractStatus status)
         {
             var payload = new ContractResponseDto

@@ -10,6 +10,7 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
     /// Manages client resources. Managers and Admins can create and update clients;
     /// only Admins can delete. All authenticated users may read.
     /// </summary>
+    // Ref (service layer pattern): https://learn.microsoft.com/en-us/aspnet/mvc/overview/older-versions-1/models-data/validating-with-a-service-layer-cs
     [ApiController]
     [Route("api/clients")]
     [Authorize]
@@ -69,21 +70,6 @@ namespace ST10439147_PRO7311_POE_Back.Controllers
                 return Ok(new { Message = "Access denied – Managers and Admins only.", Status = false });
 
             var result = await _clientService.PatchClient(id, patch);
-            return result.Status ? Ok(result) : NotFound(result);
-        }
-
-        /// <summary>Updates an existing client. Requires Manager or Admin role.</summary>
-        /// <param name="id">The client ID to update.</param>
-        /// <param name="updated">Updated client data.</param>
-        [HttpPut("{id:int}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Update(int id, [FromBody] Clients updated)
-        {
-            if (!this.IsManager())
-                return Ok(new { Message = "Access denied – Managers and Admins only.", Status = false });
-
-            var result = await _clientService.UpdateClient(id, updated);
             return result.Status ? Ok(result) : NotFound(result);
         }
 

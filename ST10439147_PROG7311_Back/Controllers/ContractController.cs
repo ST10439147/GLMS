@@ -12,6 +12,7 @@ namespace ST10439147_PRO7311_POE.Controllers
     /// Managers and Admins can create, update, and change status; all authenticated users can read.
     /// Admins have exclusive rights to delete contracts and service requests.
     /// </summary>
+    // Ref (service layer pattern): https://learn.microsoft.com/en-us/aspnet/mvc/overview/older-versions-1/models-data/validating-with-a-service-layer-cs
     [ApiController]
     [Route("api/contracts")]
     [Authorize]
@@ -45,13 +46,13 @@ namespace ST10439147_PRO7311_POE.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<List<Contract>>> GetAll(
             [FromQuery] DateTime? startFrom,
-            [FromQuery] DateTime? startTo,
+            [FromQuery] DateTime? endTo,
             [FromQuery] ContractStatus? status)
         {
             if (!this.IsLoggedIn())
                 return Ok(Deny("Access denied – please log in."));
 
-            var results = await _contractService.SearchContracts(startFrom, startTo, status);
+            var results = await _contractService.SearchContracts(startFrom, endTo, status);
             return Ok(results);
         }
 
