@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ST10439147_PRO7311_POE_Back.Models;
 
 namespace ST10439147_PRO7311_POE_Back.Extensions
