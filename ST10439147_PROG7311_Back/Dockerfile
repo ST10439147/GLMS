@@ -1,3 +1,4 @@
+# Learn Docker – Full DevOps Course for Deploying Containerized Apps https://www.youtube.com/watch?v=rjjES5IsPdg
 # -- Stage 1: Build ------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
