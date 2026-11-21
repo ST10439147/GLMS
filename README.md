@@ -508,7 +508,3 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 |---|---|
 | **Repository / Service Layer** | `IClientService`, `IContractService`, `IUserService`, `IFileService` abstract all data access from controllers |
 | **JWT Authentication** | `AuthController` issues signed tokens; all subsequent API calls are authenticated via the `Bearer` scheme |
-
----
-
-*PROG7311 – Portfolio of Evidence Part 3 | Student Number: ST10439147*
